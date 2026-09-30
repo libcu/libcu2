@@ -75,7 +75,7 @@ docs                   the reference: docs/sentinel.md and docs/fixed-assets.md 
 ## Documents
 
 This project follows the standard libc interface.
-* Learning by reference: documentation can be found in [docs](docs).
+* Learning by reference: documentation can be found in [docs](docs); the shell tools are described in [docs/file-utils](docs/file-utils/README.md).
 * Learning by tests: tests can be found in [libcu.tests](src/libcu.tests).
 
 ## Contributing

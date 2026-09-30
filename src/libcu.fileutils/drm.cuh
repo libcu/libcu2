@@ -6,7 +6,7 @@
 __device__ int d_drm_rc;
 __global__ void g_drm(pipelineRedir redir, char *str) {
 	struct stat sbuf;
-	d_drm_rc = !LSTAT(str, &sbuf) && unlink(str);
+	d_drm_rc = LSTAT(str, &sbuf) < 0 || unlink(str) < 0; // nonzero on failure
 }
 int drm(pipelineRedir redir, char *str) {
 	pipelineOpen(redir);

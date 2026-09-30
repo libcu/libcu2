@@ -15,6 +15,6 @@ int main(int argc, char **argv) {
 	//int interact = ((argv[1] && argv[1][0] == '-' && argv[1][1] == 'i') || (argv[2] && argv[2][0] == '-' && argv[2][1] == 'i') ? 1 : 0);
 	for (int i = /*recurse+interact+*/1; i < argc; i++)
 		if (argv[i][0] != '-')
-			if (!drm_(redir, argv[i]))
+			if (drm_(redir, argv[i]))
 				fprintf(stderr, "rm: could not remove %s\n", argv[i]);
 }

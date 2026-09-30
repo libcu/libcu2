@@ -14,15 +14,14 @@ int main(int argc, const char **argv) {
 	pipelineRedir redir[2]; sentinelClientRedir(redir);
 	if (argc <= 1 || argc > 2) {
 		char pwd[FILENAME_MAX];
-		if (!dpwd_(redir, pwd)) {
+		if (!dpwd_(redir, pwd))
 			printf("%s\n", pwd);
-			exit(1);
-		}
+		exit(argc <= 1 ? 0 : 1);
 	}
 	int r = dcd_(redir, (char *)argv[1]);
-	if (!r) {
+	if (r) {
 		fprintf(stderr, "%s: %s: %s\n", argv[0], argv[1], strerror(r));
-		exit(0);
+		exit(1);
 	}
 	exit(0);
 }

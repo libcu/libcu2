@@ -23,7 +23,7 @@ int main(int argc, const char **argv) {
 		dumpfile(stdin);
 	else for (int i = 1; i < argc; i++) {
 		int r = dcat_(redir, (char *)argv[i]);
-		if (!r)
+		if (r)
 			fprintf(stderr, "%s: %s: %s\n", argv[0], argv[i], strerror(r));
 	}
 	exit(0);
