@@ -129,7 +129,7 @@ extern __device__ int fprintf_(FILE *__restrict stream, const char *__restrict f
 /* Write formatted output to stdout. */
 //builtin: extern __device__ int printf_(const char *__restrict format, ...);
 /* Write formatted output to S.  */
-#define sprintf(s, format, ...) snprintf_(s, 0xffffffff, format, __VA_ARGS__)
+#define sprintf(s, format, ...) snprintf_(s, 0xffffffff, format, ##__VA_ARGS__)
 //extern __device__ int sprintf_(char *__restrict s, const char *__restrict format, ...);
 //#define sprintf sprintf_
 

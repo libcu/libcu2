@@ -70,8 +70,8 @@ static __device__ hash_t __iob_dir = HASHINIT;
 static __device__ mode_t __umask = 0;
 
 __device__ int expandPath(const char *path, char *newPath) {
-	register unsigned char *d = (unsigned char *)newPath;
-	register unsigned char *s;
+	unsigned char *d = (unsigned char *)newPath;
+	unsigned char *s;
 	if (!path)
 		panic("expandPath: null path");
 	// add cwd
@@ -90,7 +90,7 @@ __device__ int expandPath(const char *path, char *newPath) {
 			if (c == '\\') {
 				// directory reached
 				if (i == 2 && s[-1] == '.') d -= 2; // self directory
-				else if (i == 3 && s[-1] == '.' && s[-2] == '.') { d -= 4; while (*d >= *newPath && *d != '\\') *d--; } // parent directory
+				else if (i == 3 && s[-1] == '.' && s[-2] == '.') { d -= 4; while (d > (unsigned char *)newPath && *d != '\\') d--; } // parent directory
 				i = 0;
 			}
 			// advance
@@ -198,7 +198,7 @@ __device__ int fsystemRename(const char *old, const char *new_) {
 		_set_errno(ENOENT);
 		return -1;
 	}
-	register char *oldPathEnd = oldPath + oldPathLength - 1; while (*oldPathEnd && *oldPathEnd != '\\') oldPathEnd--;
+	char *oldPathEnd = oldPath + oldPathLength - 1; while (*oldPathEnd && *oldPathEnd != '\\') oldPathEnd--;
 	strcpy(oldPathEnd + 1, new_);
 	//
 	int newPathLength;
