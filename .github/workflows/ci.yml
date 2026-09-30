@@ -1,0 +1,50 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+# No GPU on the runners: every target is compiled and device-linked, and the host-only
+# tests run. The GPU tests (ctest -L gpu) need a machine with a device.
+jobs:
+  linux:
+    name: linux cuda ${{ matrix.cuda }}
+    runs-on: ubuntu-24.04
+    container: nvidia/cuda:${{ matrix.cuda }}-devel-ubuntu24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cuda: ["12.9.1", "13.0.1"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends cmake ninja-build g++
+      - name: Configure
+        run: cmake --preset default
+      - name: Build
+        run: cmake --build --preset default
+      - name: Host tests
+        run: ctest --test-dir build/default -L host --output-on-failure
+      - name: Build the Tcl interpreters
+        run: |
+          cmake --preset tcl
+          cmake --build --preset tcl --target libcu.jimtcl libcu.tinytcl jimtcl tinytcl
+
+  windows:
+    name: windows cuda 12.9
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Jimver/cuda-toolkit@v0.2.24
+        with:
+          cuda: "12.9.1"
+          sub-packages: '["nvcc", "cudart", "cccl", "visual_studio_integration"]'
+          method: network
+      - name: Configure
+        run: cmake --preset windows
+      - name: Build
+        run: cmake --build --preset windows
+      - name: Host tests
+        run: ctest --test-dir build/windows -C Debug -L host --output-on-failure

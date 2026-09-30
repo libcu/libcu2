@@ -1,0 +1,42 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 24, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "Debug, sm_75 (builds without a GPU)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "CMAKE_CUDA_ARCHITECTURES": "75" }
+    },
+    {
+      "name": "native",
+      "displayName": "Release, the GPU in this machine",
+      "inherits": "default",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "CMAKE_CUDA_ARCHITECTURES": "native" }
+    },
+    {
+      "name": "tcl",
+      "displayName": "Debug with both Tcl interpreters",
+      "inherits": "default",
+      "cacheVariables": { "LIBCU_BUILD_JIMTCL": "ON", "LIBCU_BUILD_JIMTCL78": "ON", "LIBCU_BUILD_TINYTCL": "ON" }
+    },
+    {
+      "name": "windows",
+      "displayName": "Visual Studio 2022, x64",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_CUDA_ARCHITECTURES": "75" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "default", "configurePreset": "default" },
+    { "name": "native", "configurePreset": "native" },
+    { "name": "tcl", "configurePreset": "tcl" },
+    { "name": "windows", "configurePreset": "windows", "configuration": "Debug" }
+  ],
+  "testPresets": [
+    { "name": "native", "configurePreset": "native", "output": { "outputOnFailure": true } }
+  ]
+}
