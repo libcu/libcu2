@@ -27,7 +27,9 @@ THE SOFTWARE.
 #define _REGEXCU_H
 #include <crtdefscu.h>
 
-#if __OS_WIN
+/* libcu's regex is the Jim Tcl engine, and its regex_t is the engine's own state, on every
+** platform: the glibc <regex.h> struct has none of these fields, so including it instead
+** (as the Unix branch once did) left regexcu.cu uncompilable outside the lean build. */
 typedef struct {
 	int rm_so;
 	int rm_eo;
@@ -85,9 +87,6 @@ enum {
 	REG_ERR_NULL_CHAR,
 	REG_ERR_NUM
 };
-#elif __OS_UNIX
-#include <regex.h>
-#endif
 
 #ifdef __CUDA_ARCH__
 __BEGIN_DECLS;

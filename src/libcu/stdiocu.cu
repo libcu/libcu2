@@ -463,8 +463,9 @@ __device__ int fseeko_(FILE *stream, __off_t off, int whence) {
 	switch (whence) {
 	case SEEK_SET: return (s->off = off);
 	case SEEK_CUR: return (s->off += off);
-	case SEEK_END: int64_t size; memfileFileSize(f->u.file, &size); return (s->off = size - off);
+	case SEEK_END: { int64_t size; memfileFileSize(f->u.file, &size); return (s->off = size - off); }
 	default: return -1;
+	}
 #endif
 }
 
@@ -489,7 +490,8 @@ __device__ int fgetpos_(FILE *__restrict stream, fpos_t *__restrict pos) {
 	return panic_no_fsystem();
 #else
 	cuFILE *s = (cuFILE *)stream;
-	*pos = s->off;
+	// fpos_t is a struct on glibc whose first member is the offset, and an integer on MSVC
+	__off_t off = (__off_t)s->off; memset(pos, 0, sizeof(*pos)); memcpy(pos, &off, sizeof(off));
 	return 0;
 #endif
 }
@@ -503,7 +505,7 @@ __device__ int fsetpos_(FILE *stream, const fpos_t *pos) {
 	return panic_no_fsystem();
 #else
 	cuFILE *s = (cuFILE *)stream;
-	s->off = pos_;
+	__off_t off; memcpy(&off, &pos_, sizeof(off)); s->off = off;
 	return 0;
 #endif
 }
@@ -523,8 +525,9 @@ __device__ int fseeko64_(FILE *stream, __off64_t off, int whence) {
 	switch (whence) {
 	case SEEK_SET: return (s->off = off);
 	case SEEK_CUR: return (s->off += off);
-	case SEEK_END: int64_t size; memfileFileSize(f->u.file, &size); return (s->off = size - off);
+	case SEEK_END: { int64_t size; memfileFileSize(f->u.file, &size); return (s->off = size - off); }
 	default: return -1;
+	}
 #endif
 }
 
@@ -546,7 +549,8 @@ __device__ int fgetpos64_(FILE *__restrict stream, fpos64_t *__restrict pos) {
 	return panic_no_fsystem();
 #else
 	cuFILE *s = (cuFILE *)stream;
-	*pos = s->off;
+	// fpos64_t is a struct on glibc whose first member is the offset, and an integer on MSVC
+	__off64_t off = s->off; memset(pos, 0, sizeof(*pos)); memcpy(pos, &off, sizeof(off));
 	return 0;
 #endif
 }
@@ -560,7 +564,7 @@ __device__ int fsetpos64_(FILE *stream, const fpos64_t *pos) {
 	return panic_no_fsystem();
 #else
 	cuFILE *s = (cuFILE *)stream;
-	s->off = pos_;
+	__off64_t off; memcpy(&off, &pos64_, sizeof(off)); s->off = off;
 	return 0;
 #endif
 }

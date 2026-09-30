@@ -49,8 +49,9 @@ __device__ off64_t lseek64_(int fd, off64_t offset, int whence) {
 	switch (whence) {
 	case SEEK_SET: return (s->off = offset);
 	case SEEK_CUR: return (s->off += offset);
-	case SEEK_END: int64_t size; memfileFileSize(f->u.file, &size); return (s->off = size - offset);
+	case SEEK_END: { int64_t size; memfileFileSize(f->u.file, &size); return (s->off = size - offset); }
 	default: return -1;
+	}
 #endif
 }
 #endif

@@ -9,6 +9,7 @@ option(LIBCU_BUILD_TESTS "Build the test runner (needs a GPU to run)" ${PROJECT_
 option(LIBCU_BUILD_JIMTCL "Build the jimtcl 0.77 interpreter device port" OFF)
 option(LIBCU_BUILD_JIMTCL78 "Build the jimtcl 0.78 interpreter device port" OFF)
 option(LIBCU_BUILD_TINYTCL "Build the tinytcl interpreter device port" OFF)
+option(LIBCU_LEAN "Leave out the parts of the library the core does not need (scanf family, ...); the Tcl ports need it OFF" ON)
 
 # Compute capability. CUDA 13 dropped everything below sm_75, so that is the
 # portable default. Use -DCMAKE_CUDA_ARCHITECTURES=native on a machine with a GPU.
@@ -30,6 +31,10 @@ set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 find_package(CUDAToolkit REQUIRED)
 find_package(Threads REQUIRED)
 include(CTest)
+
+# The interpreter kernels carry more compiler-generated constants than ptxas allows by
+# default; nvlink asks for this flag on every object that feeds those device links.
+set(LIBCU_TCL_PTXAS $<$<COMPILE_LANGUAGE:CUDA>:SHELL:-Xptxas --disable-optimizer-constants>)
 
 # Diagnostics that the code base trips on purpose (unused set variables in
 # ported C code, jumps past initialisers in switch bodies).
@@ -53,6 +58,9 @@ target_include_directories(libcu PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_compile_options(libcu PRIVATE ${LIBCU_CUDA_DIAG})
 target_link_libraries(libcu PUBLIC CUDA::cudart_static Threads::Threads)
+if(NOT LIBCU_LEAN)
+  target_compile_definitions(libcu PUBLIC LIBCU_FULL)
+endif()
 # libcu++ (CCCL) is used for the system-scope atomics in Sentinel. CUDA 13 moved it to
 # include/cccl, which nvcc finds on its own but the host compiler does not.
 foreach(dir IN LISTS CUDAToolkit_INCLUDE_DIRS)
@@ -112,12 +120,13 @@ if(LIBCU_BUILD_JIMTCL)
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/tcl/libcu.jimtcl>)
   target_compile_definitions(libcu.jimtcl PRIVATE
     jim_ext_aio jim_ext_namespace jim_ext_package JIM_MAINTAINER JIM_REFERENCES)
-  target_compile_options(libcu.jimtcl PRIVATE ${LIBCU_CUDA_DIAG})
+  target_compile_options(libcu.jimtcl PRIVATE ${LIBCU_CUDA_DIAG} ${LIBCU_TCL_PTXAS})
   target_link_libraries(libcu.jimtcl PUBLIC libcu)
   set_target_properties(libcu.jimtcl PROPERTIES PREFIX "" OUTPUT_NAME libcu.jimtcl)
 
   add_executable(jimtcl src/tcl/jimtcl/jimsh.cu)
   target_link_libraries(jimtcl PRIVATE libcu.jimtcl)
+  target_compile_options(jimtcl PRIVATE ${LIBCU_TCL_PTXAS})
 endif()
 
 if(LIBCU_BUILD_JIMTCL78)
@@ -128,7 +137,7 @@ if(LIBCU_BUILD_JIMTCL78)
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/tcl/libcu.jimtcl.78>)
   target_compile_definitions(libcu.jimtcl.78 PRIVATE
     jim_ext_aio jim_ext_namespace jim_ext_package JIM_MAINTAINER JIM_REFERENCES)
-  target_compile_options(libcu.jimtcl.78 PRIVATE ${LIBCU_CUDA_DIAG})
+  target_compile_options(libcu.jimtcl.78 PRIVATE ${LIBCU_CUDA_DIAG} ${LIBCU_TCL_PTXAS})
   target_link_libraries(libcu.jimtcl.78 PUBLIC libcu)
   set_target_properties(libcu.jimtcl.78 PROPERTIES PREFIX "" OUTPUT_NAME libcu.jimtcl.78)
 endif()
@@ -138,12 +147,13 @@ if(LIBCU_BUILD_TINYTCL)
   target_include_directories(libcu.tinytcl PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/tcl/libcu.tinytcl>)
   target_compile_definitions(libcu.tinytcl PRIVATE TCL_MEM_DEBUG)
-  target_compile_options(libcu.tinytcl PRIVATE ${LIBCU_CUDA_DIAG})
+  target_compile_options(libcu.tinytcl PRIVATE ${LIBCU_CUDA_DIAG} ${LIBCU_TCL_PTXAS})
   target_link_libraries(libcu.tinytcl PUBLIC libcu)
   set_target_properties(libcu.tinytcl PROPERTIES PREFIX "" OUTPUT_NAME libcu.tinytcl)
 
   add_executable(tinytcl src/tcl/tinytcl/tinySh.cu)
   target_link_libraries(tinytcl PRIVATE libcu.tinytcl)
+  target_compile_options(tinytcl PRIVATE ${LIBCU_TCL_PTXAS})
 endif()
 
 # ---------------------------------------------------------------------------

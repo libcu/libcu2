@@ -30,7 +30,7 @@ jobs:
       - name: Build the Tcl interpreters
         run: |
           cmake --preset tcl
-          cmake --build --preset tcl --target libcu.jimtcl libcu.tinytcl jimtcl tinytcl
+          cmake --build --preset tcl --target libcu.jimtcl libcu.jimtcl.78 libcu.tinytcl jimtcl tinytcl
 
   windows:
     name: windows cuda 12.9

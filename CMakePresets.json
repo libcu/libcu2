@@ -19,7 +19,7 @@
       "name": "tcl",
       "displayName": "Debug with both Tcl interpreters",
       "inherits": "default",
-      "cacheVariables": { "LIBCU_BUILD_JIMTCL": "ON", "LIBCU_BUILD_JIMTCL78": "ON", "LIBCU_BUILD_TINYTCL": "ON" }
+      "cacheVariables": { "LIBCU_BUILD_JIMTCL": "ON", "LIBCU_BUILD_JIMTCL78": "ON", "LIBCU_BUILD_TINYTCL": "ON", "LIBCU_LEAN": "OFF" }
     },
     {
       "name": "windows",

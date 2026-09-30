@@ -26,8 +26,13 @@ THE SOFTWARE.
 #ifndef _CRTDEFSCU_H
 #define _CRTDEFSCU_H
 
+/* The lean build leaves out what the core does not need (the scanf family among others).
+** Define LIBCU_FULL, which the CMake option LIBCU_LEAN=OFF does, for the whole library;
+** the Tcl interpreter ports need it. */
+#ifndef LIBCU_FULL
 #define LIBCU_LEAN_AND_MEAN
 #define LIBCU_LEAN_FSYSTEM
+#endif
 
 //////////////////////
 // OS
