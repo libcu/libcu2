@@ -21,7 +21,7 @@ typedef	long int word; /* "word" used for optimal copy speed */
 #define	_wsizex8 "32"
 #define	_wmask "3"
 
-__device__ void *memcpy_(void *__restrict dest, const void *__restrict src, size_t n) {
+__device__ __noinline__ void *memcpy_(void *__restrict dest, const void *__restrict src, size_t n) {
 #ifndef xOMIT_PTX
 	void *r;
 	asm(
@@ -294,7 +294,7 @@ _ret:
 }
 
 /* Set N bytes of S to C.  */
-__device__ void *memset_(void *s, int c, size_t n) {
+__device__ __noinline__ void *memset_(void *s, int c, size_t n) {
 	//#ifndef OMIT_PTX
 	//#else
 	unsigned char *a = (unsigned char *)s;
@@ -352,7 +352,7 @@ _ret:
 }
 
 /* Compare N bytes of S1 and S2.  */
-__device__ int memcmp_(const void *s1, const void *s2, size_t n) {
+__device__ __noinline__ int memcmp_(const void *s1, const void *s2, size_t n) {
 #ifndef OMIT_PTX
 	int r;
 	asm(
@@ -392,7 +392,7 @@ __device__ int memcmp_(const void *s1, const void *s2, size_t n) {
 }
 
 /* Search N bytes of S for C.  */
-__device__ void *memchr_(const void *s, int c, size_t n) {
+__device__ __noinline__ void *memchr_(const void *s, int c, size_t n) {
 #ifndef OMIT_PTX
 	void *r;
 	asm(
@@ -433,7 +433,7 @@ _ret:
 }
 
 /* Copy SRC to DEST.  */
-__device__ char *strcpy_(char *__restrict dest, const char *__restrict src) {
+__device__ __noinline__ char *strcpy_(char *__restrict dest, const char *__restrict src) {
 #ifndef OMIT_PTX
 	char *r;
 	asm(
@@ -463,7 +463,7 @@ __device__ char *strcpy_(char *__restrict dest, const char *__restrict src) {
 }
 
 /* Copy no more than N characters of SRC to DEST.  */
-__device__ char *strncpy_(char *__restrict dest, const char *__restrict src, size_t n) {
+__device__ __noinline__ char *strncpy_(char *__restrict dest, const char *__restrict src, size_t n) {
 #ifndef OMIT_PTX
 	char *r;
 	asm(
@@ -510,7 +510,7 @@ __device__ char *strncpy_(char *__restrict dest, const char *__restrict src, siz
 }
 
 /* Append SRC onto DEST.  */
-__device__ char *strcat_(char *__restrict dest, const char *__restrict src) {
+__device__ __noinline__ char *strcat_(char *__restrict dest, const char *__restrict src) {
 #ifndef OMIT_PTX
 	char *r;
 	asm(
@@ -549,7 +549,7 @@ __device__ char *strcat_(char *__restrict dest, const char *__restrict src) {
 }
 
 /* Append no more than N characters from SRC onto DEST.  */
-__device__ char *strncat_(char *__restrict dest, const char *__restrict src, size_t n) {
+__device__ __noinline__ char *strncat_(char *__restrict dest, const char *__restrict src, size_t n) {
 #ifndef OMIT_PTX
 	char *r;
 	asm(
@@ -591,7 +591,7 @@ __device__ char *strncat_(char *__restrict dest, const char *__restrict src, siz
 }
 
 /* Compare S1 and S2.  */
-__device__ int strcmp_(const char *s1, const char *s2) {
+__device__ __noinline__ int strcmp_(const char *s1, const char *s2) {
 #ifndef OMIT_PTX
 	int r;
 	asm(
@@ -622,7 +622,7 @@ __device__ int strcmp_(const char *s1, const char *s2) {
 #endif
 }
 /* Compare S1 and S2. Case insensitive.  */
-__device__ int stricmp_(const char *s1, const char *s2) {
+__device__ __noinline__ int stricmp_(const char *s1, const char *s2) {
 #ifndef OMIT_PTX
 	int r;
 	asm(
@@ -671,7 +671,7 @@ __device__ int stricmp_(const char *s1, const char *s2) {
 }
 
 /* Compare N characters of S1 and S2.  */
-__device__ int strncmp_(const char *s1, const char *s2, size_t n) {
+__device__ __noinline__ int strncmp_(const char *s1, const char *s2, size_t n) {
 #ifndef OMIT_PTX
 	int r;
 	asm(
@@ -706,7 +706,7 @@ __device__ int strncmp_(const char *s1, const char *s2, size_t n) {
 }
 
 /* Compare N characters of S1 and S2. Case insensitive.  */
-__device__ int strnicmp_(const char *s1, const char *s2, size_t n) {
+__device__ __noinline__ int strnicmp_(const char *s1, const char *s2, size_t n) {
 #ifndef OMIT_PTX
 	int r;
 	asm(
@@ -790,7 +790,7 @@ __device__ char *strndup_(const char *s, size_t n) {
 }
 
 /* Find the first occurrence of C in S.  */
-__device__ char *strchr_(const char *s, int c) {
+__device__ __noinline__ char *strchr_(const char *s, int c) {
 #ifndef OMIT_PTX
 	char *r;
 	asm(
@@ -838,7 +838,7 @@ __device__ char *strchr_(const char *s, int c) {
 }
 
 /* Find the last occurrence of C in S.  */
-__device__ char *strrchr_(const char *s, int c) {
+__device__ __noinline__ char *strrchr_(const char *s, int c) {
 #ifndef OMIT_PTX
 	char *r;
 	asm(
@@ -879,7 +879,7 @@ __device__ size_t strspn_(const char *s, const char *accept) {
 }
 
 /* Find the first occurrence in S of any character in ACCEPT.  */
-__device__ char *strpbrk_(const char *s, const char *accept) {
+__device__ __noinline__ char *strpbrk_(const char *s, const char *accept) {
 #ifndef OMIT_PTX
 	char *r;
 	asm(
@@ -956,7 +956,7 @@ __device__ char *strtok_(char *__restrict s, const char *__restrict delim) {
 }
 
 /* Return the length of S.  */
-__device__ size_t strlen_(const char *s) {
+__device__ __noinline__ size_t strlen_(const char *s) {
 #ifndef OMIT_PTX
 	size_t r;
 	asm(
@@ -993,7 +993,7 @@ __device__ size_t strlen_(const char *s) {
 }
 
 /* Return the length of S.  */
-__device__ size_t strlen16_(const void *s) {
+__device__ __noinline__ size_t strlen16_(const void *s) {
 #ifndef OMIT_PTX
 	size_t r;
 	asm(
@@ -1030,7 +1030,7 @@ __device__ size_t strlen16_(const void *s) {
 }
 
 /* Find the length of STRING, but scan at most MAXLEN characters. If no '\0' terminator is found in that many characters, return MAXLEN.  */
-__device__ size_t strnlen_(const char *s, size_t maxlen) {
+__device__ __noinline__ size_t strnlen_(const char *s, size_t maxlen) {
 #ifndef OMIT_PTX
 	size_t r;
 	asm(
