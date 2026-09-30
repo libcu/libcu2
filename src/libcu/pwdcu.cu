@@ -12,7 +12,7 @@ static __device__ passwd *__pwdIdx = nullptr;
 /* search user database for a user ID */
 __device__ struct passwd *getpwuid_(uid_t uid) {
 #if __OS_WIN
-	register passwd *p = __pwds;
+	passwd *p = __pwds;
 	while (p->pw_name && p->pw_uid != uid) *p++;
 	return (p->pw_name ? p : nullptr);
 #elif __OS_UNIX
@@ -24,7 +24,7 @@ __device__ struct passwd *getpwuid_(uid_t uid) {
 __device__ struct passwd *getpwnam_(const char *name) {
 #if __OS_WIN
 	if (!name) return nullptr;
-	register passwd *p = __pwds;
+	passwd *p = __pwds;
 	while (p->pw_name && strcmp(p->pw_name, name)) *p++;
 	return (p->pw_name ? p : nullptr);
 #elif __OS_UNIX

@@ -111,7 +111,7 @@ __device__ FILE *tmpfile_() {
 		return nullptr;
 	}
 	FILE *file = freopen(newPath, "wb+", nullptr);
-	register cuFILE *s = (cuFILE *)file;
+	cuFILE *s = (cuFILE *)file;
 	fsystemSetFlag(s->_file, DELETE);
 	return file;
 #endif
@@ -124,7 +124,7 @@ __device__ int fclose_(FILE *stream, bool wait) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	dirEnt_t *f; UNUSED_SYMBOL(f);
 	if (!s || !(f = (dirEnt_t *)s->_base))
 		panic("fclose: !stream");
@@ -151,7 +151,7 @@ __device__ FILE *freopen_(const char *__restrict filename, const char *__restric
 #ifdef LIBCU_LEAN_FSYSTEM
 	return (FILE *)panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	if (s)
 		streamFree(s);
 	// Parse the specified mode.
@@ -206,7 +206,7 @@ __device__ FILE *freopen64_(const char *__restrict filename, const char *__restr
 #ifdef LIBCU_LEAN_FSYSTEM
 	return (FILE *)panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	if (s)
 		streamFree(s);
 	// Parse the specified mode.
@@ -377,7 +377,7 @@ __device__ size_t fread_(void *__restrict ptr, size_t size, size_t n, FILE *__re
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	dirEnt_t *f;
 	if (!s || !(f = (dirEnt_t *)s->_base))
 		panic("fread: !stream");
@@ -395,7 +395,7 @@ __device__ size_t fwrite_(const void *__restrict ptr, size_t size, size_t n, FIL
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	dirEnt_t *f;
 	if (!s || !(f = (dirEnt_t *)s->_base))
 		panic("fwrite: !stream");
@@ -413,7 +413,7 @@ __device__ int fseek_(FILE *stream, long int off, int whence) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	dirEnt_t *f;
 	if (!s || !(f = (dirEnt_t *)s->_base))
 		panic("lseek: !stream");
@@ -432,7 +432,7 @@ __device__ long int ftell_(FILE *stream) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	return (long int)s->off;
 #endif
 }
@@ -443,7 +443,7 @@ __device__ void rewind_(FILE *stream) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	s->off = 0;
 #endif
 }
@@ -456,7 +456,7 @@ __device__ int fseeko_(FILE *stream, __off_t off, int whence) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	dirEnt_t *f;
 	if (!s || !(f = (dirEnt_t *)s->_base))
 		panic("fseeko: !stream");
@@ -474,7 +474,7 @@ __device__ __off_t ftello_(FILE *stream) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	return s->off;
 #endif
 }
@@ -488,7 +488,7 @@ __device__ int fgetpos_(FILE *__restrict stream, fpos_t *__restrict pos) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	*pos = s->off;
 	return 0;
 #endif
@@ -502,7 +502,7 @@ __device__ int fsetpos_(FILE *stream, const fpos_t *pos) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	s->off = pos_;
 	return 0;
 #endif
@@ -516,7 +516,7 @@ __device__ int fseeko64_(FILE *stream, __off64_t off, int whence) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	dirEnt_t *f;
 	if (!s || !(f = (dirEnt_t *)s->_base))
 		panic("fseeko: !stream");
@@ -534,7 +534,7 @@ __device__ __off64_t ftello64_(FILE *stream) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	return s->off;
 #endif
 }
@@ -545,7 +545,7 @@ __device__ int fgetpos64_(FILE *__restrict stream, fpos64_t *__restrict pos) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	*pos = s->off;
 	return 0;
 #endif
@@ -559,7 +559,7 @@ __device__ int fsetpos64_(FILE *stream, const fpos64_t *pos) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	s->off = pos_;
 	return 0;
 #endif
@@ -572,7 +572,7 @@ __device__ void clearerr_(FILE *stream) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	s->state = 0;
 #endif
 }
@@ -583,7 +583,7 @@ __device__ int feof_(FILE *stream) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	return s->state & 0xF;
 #endif
 }
@@ -593,7 +593,7 @@ __device__ int ferror_(FILE *stream) {
 	if (ISHOSTFILE(stream)) { stdio_ferror msg(stream); return msg.rc; }
 	if (stream == stdout || stream == stderr)
 		return 0;
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	return s->state & 0xFFF0;
 }
 
@@ -606,7 +606,7 @@ __device__ void perror_(const char *s) { fperror_(stderr, s); }
 /* Return the system file descriptor for STREAM.  */
 __device__ int fileno_(FILE *stream) {
 	if (ISHOSTFILE(stream)) { stdio_fileno msg(stream); return msg.rc; }
-	register cuFILE *s = (cuFILE *)stream;
+	cuFILE *s = (cuFILE *)stream;
 	return stream == stdin ? 0 : stream == stdout ? 1 : stream == stderr ? 2 : s->_file;
 }
 

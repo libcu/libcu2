@@ -69,7 +69,6 @@ THE SOFTWARE.
 #define _uintptr_t uintptr_t
 //#define __USE_LARGEFILE64 1
 #elif __OS_UNIX
-#define register
 #define HAVE_STDINT_H
 #define MAX_PATH 260
 #define DELETE 0x00010000L
@@ -78,7 +77,7 @@ THE SOFTWARE.
 #endif
 #if defined(__LP64__) || defined(_LP64)
 # define _WIN64 1
-typedef unsigned int long long _uintptr_t;
+typedef unsigned long long _uintptr_t;
 # else
 typedef unsigned int _uintptr_t;
 # endif
@@ -86,16 +85,16 @@ typedef unsigned int _uintptr_t;
 
 #ifdef __CUDA_ARCH__
 #if __OS_WIN
-#define panic(fmt, ...) { printf(fmt"\n", __VA_ARGS__); asm("trap;"); }
+#define panic(fmt, ...) { printf(fmt"\n", ##__VA_ARGS__); __trap(); }
 #elif __OS_UNIX
-#define panic(fmt, ...) { printf(fmt"\n"); asm("trap;"); }
+#define panic(fmt, ...) { printf(fmt"\n", ##__VA_ARGS__); __trap(); }
 #endif
 #else
 //__forceinline__ void Coverage(int line) { }
 #if __OS_WIN
-#define panic(fmt, ...) { printf(fmt"\n", __VA_ARGS__); exit(1); }
+#define panic(fmt, ...) { printf(fmt"\n", ##__VA_ARGS__); exit(1); }
 #elif __OS_UNIX
-#define panic(fmt, ...) { printf(fmt"\n"); exit(1); }
+#define panic(fmt, ...) { printf(fmt"\n", ##__VA_ARGS__); exit(1); }
 #endif
 #endif /* __CUDA_ARCH__ */
 
@@ -103,8 +102,23 @@ typedef unsigned int _uintptr_t;
 
 #include <cuda_runtime.h>
 #include <stdint.h>
+#include <stdarg.h>
+#ifdef __cplusplus
+/* The C++ wrappers for the C headers #undef the C library names they import (libstdc++'s
+** <cstring> undefines strlen, memcpy, ...). libcu redefines those names as macros for device
+** code, so pull the wrappers in once here, before any libcu header defines a macro, otherwise
+** a later include of <cstring> (libcu++ does this) silently turns the macros off. */
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
+#include <ctime>
+#include <cerrno>
+#include <csetjmp>
+#include <cstdarg>
+#endif
 #if __OS_WIN
-#define uint unsigned int
+typedef unsigned int uint;
 #else
 #include <sys/types.h>
 #endif

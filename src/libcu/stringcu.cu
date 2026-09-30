@@ -221,8 +221,8 @@ __device__ void *memcpy_(void *__restrict dest, const void *__restrict src, size
 		: "="__R(r) : __R(dest), __R(src), __R(n));
 	return r;
 #else
-	register unsigned char *a = (unsigned char *)dest;
-	register unsigned char *b = (unsigned char *)src;
+	unsigned char *a = (unsigned char *)dest;
+	unsigned char *b = (unsigned char *)src;
 	if (!n || dest == src) goto _ret;
 	size_t t;
 	// Do an ascending copy
@@ -297,9 +297,9 @@ _ret:
 __device__ void *memset_(void *s, int c, size_t n) {
 	//#ifndef OMIT_PTX
 	//#else
-	register unsigned char *a = (unsigned char *)s;
+	unsigned char *a = (unsigned char *)s;
 	if (!n) goto _ret;
-	register size_t t;
+	size_t t;
 	// tiny optimize
 	if (n < 3 * wsize) {
 		while (n) { *a++ = c; --n; }
@@ -384,8 +384,8 @@ __device__ int memcmp_(const void *s1, const void *s2, size_t n) {
 	return r;
 #else
 	if (!n) return 0;
-	register unsigned char *a = (unsigned char *)s1;
-	register unsigned char *b = (unsigned char *)s2;
+	unsigned char *a = (unsigned char *)s1;
+	unsigned char *b = (unsigned char *)s2;
 	while (--n && *a == *b) { a++; b++; }
 	return *a - *b;
 #endif
@@ -422,7 +422,7 @@ __device__ void *memchr_(const void *s, int c, size_t n) {
 	return r;
 #else
 	if (!n) goto _ret;
-	register const char *p = (const char *)s;
+	const char *p = (const char *)s;
 	do {
 		if (*p++ == c)
 			return (void *)(p - 1);
@@ -455,8 +455,8 @@ __device__ char *strcpy_(char *__restrict dest, const char *__restrict src) {
 		: "=" __R(r) : __R(dest), __R(src));
 	return r;
 #else
-	register unsigned char *d = (unsigned char *)dest;
-	register unsigned char *s = (unsigned char *)src;
+	unsigned char *d = (unsigned char *)dest;
+	unsigned char *s = (unsigned char *)src;
 	while (*s) { *d++ = *s++; } *d = *s;
 	return (char *)dest;
 #endif
@@ -500,8 +500,8 @@ __device__ char *strncpy_(char *__restrict dest, const char *__restrict src, siz
 		: "=" __R(r) : __R(dest), __R(src), __R(n));
 	return r;
 #else
-	register unsigned char *d = (unsigned char *)dest;
-	register unsigned char *s = (unsigned char *)src;
+	unsigned char *d = (unsigned char *)dest;
+	unsigned char *s = (unsigned char *)src;
 	size_t i = 0;
 	for (; i < n && *s; ++i, ++d, ++s) *d = *s;
 	for (; i < n; ++i, ++d, ++s) *d = 0;
@@ -540,8 +540,8 @@ __device__ char *strcat_(char *__restrict dest, const char *__restrict src) {
 		: "=" __R(r) : __R(dest), __R(src));
 	return r;
 #else
-	register unsigned char *d = (unsigned char *)dest;
-	register unsigned char *s = (unsigned char *)src;
+	unsigned char *d = (unsigned char *)dest;
+	unsigned char *s = (unsigned char *)src;
 	while (*d) d++;
 	while (*s) { *d++ = *s++; } *d = *s;
 	return (char *)dest;
@@ -582,8 +582,8 @@ __device__ char *strncat_(char *__restrict dest, const char *__restrict src, siz
 		: "=" __R(r) : __R(dest), __R(src), __R(n));
 	return r;
 #else
-	register unsigned char *d = (unsigned char *)dest;
-	register unsigned char *s = (unsigned char *)src;
+	unsigned char *d = (unsigned char *)dest;
+	unsigned char *s = (unsigned char *)src;
 	while (*d) d++;
 	while (*s && !--n) { *d++ = *s++; } *d = *s;
 	return (char *)dest;
@@ -615,8 +615,8 @@ __device__ int strcmp_(const char *s1, const char *s2) {
 		: "=" __I(r) : __R(s1), __R(s2));
 	return r;
 #else
-	register unsigned char *a = (unsigned char *)s1;
-	register unsigned char *b = (unsigned char *)s2;
+	unsigned char *a = (unsigned char *)s1;
+	unsigned char *b = (unsigned char *)s2;
 	while (*a && *a == *b) { a++; b++; }
 	return *a - *b;
 #endif
@@ -663,8 +663,8 @@ __device__ int stricmp_(const char *s1, const char *s2) {
 		: "=" __I(r) : __R(s1), __R(s2), __R(__curtUpperToLower));
 	return r;
 #else
-	register unsigned char *a = (unsigned char *)s1;
-	register unsigned char *b = (unsigned char *)s2;
+	unsigned char *a = (unsigned char *)s1;
+	unsigned char *b = (unsigned char *)s2;
 	while (*a && __curtUpperToLower[*a] == __curtUpperToLower[*b]) { a++; b++; }
 	return __curtUpperToLower[*a] - __curtUpperToLower[*b];
 #endif
@@ -698,8 +698,8 @@ __device__ int strncmp_(const char *s1, const char *s2, size_t n) {
 		: "=" __I(r) : __R(s1), __R(s2), __R(n));
 	return r;
 #else
-	register unsigned char *a = (unsigned char *)s1;
-	register unsigned char *b = (unsigned char *)s2;
+	unsigned char *a = (unsigned char *)s1;
+	unsigned char *b = (unsigned char *)s2;
 	while (--n > 0 && *a && *a == *b) { a++; b++; }
 	return !n ? 0 : *a - *b;
 #endif
@@ -751,8 +751,8 @@ __device__ int strnicmp_(const char *s1, const char *s2, size_t n) {
 		: "=" __I(r) : __R(s1), __R(s2), __R(n), __R(__curtUpperToLower));
 	return r;
 #else
-	register unsigned char *a = (unsigned char *)s1;
-	register unsigned char *b = (unsigned char *)s2;
+	unsigned char *a = (unsigned char *)s1;
+	unsigned char *b = (unsigned char *)s2;
 	while (n-- > 0 && *a && __curtUpperToLower[*a] == __curtUpperToLower[*b]) { a++; b++; }
 	return !n ? 0 : __curtUpperToLower[*a] - __curtUpperToLower[*b];
 #endif
@@ -830,8 +830,8 @@ __device__ char *strchr_(const char *s, int c) {
 		: "=" __R(r) : __R(s), __I(c), __R(__curtUpperToLower));
 	return r;
 #else
-	register unsigned char *s1 = (unsigned char *)s;
-	register unsigned char l = (unsigned char)__curtUpperToLower[c];
+	unsigned char *s1 = (unsigned char *)s;
+	unsigned char l = (unsigned char)__curtUpperToLower[c];
 	while (*s1 && __curtUpperToLower[*s1] != l) s1++;
 	return (char *)(*s1 ? s1 : nullptr);
 #endif
@@ -916,8 +916,8 @@ __device__ char *strpbrk_(const char *s, const char *accept) {
 		: "=" __R(r) : __R(s), __R(accept));
 	return r;
 #else
-	register const char *scanp;
-	register int c, c2;
+	const char *scanp;
+	int c, c2;
 	while (c = *s++) {
 		for (scanp = accept; c2 = *scanp++;)
 			if (c2 == c)
@@ -986,7 +986,7 @@ __device__ size_t strlen_(const char *s) {
 	return r;
 #else
 	if (!s) return 0;
-	register const char *s2 = s;
+	const char *s2 = s;
 	while (*s2) { s2++; }
 	return 0x3fffffff & (int)(s2 - s);
 #endif
@@ -1023,7 +1023,7 @@ __device__ size_t strlen16_(const void *s) {
 	return r;
 #else
 	if (!s) return 0;
-	register const short *s2 = (const short *)s;
+	const short *s2 = (const short *)s;
 	while (*s2) { s2++; }
 	return 0x3fffffff & ((int)(s2 - (const short *)s) >> 1);
 #endif
@@ -1062,8 +1062,8 @@ __device__ size_t strnlen_(const char *s, size_t maxlen) {
 	return r;
 #else
 	if (!s) return 0;
-	register const char *s2 = s;
-	register const char *s2m = s + maxlen;
+	const char *s2 = s;
+	const char *s2m = s + maxlen;
 	while (*s2 && s2 < s2m) { s2++; }
 	return 0x3fffffff & (int)(s2 - s);
 #endif

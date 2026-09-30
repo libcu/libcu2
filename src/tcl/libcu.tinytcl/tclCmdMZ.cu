@@ -275,8 +275,8 @@ __device__ int Tcl_RegsubCmd(ClientData dummy, Tcl_Interp *interp, int argc, con
 		num_matches++;
 
 		// Copy the portion of the source string before the match to the result variable.
-		register char *src; src = p + pmatch[0].rm_so;
-		register char c; c = *src;
+		char *src; src = p + pmatch[0].rm_so;
+		char c; c = *src;
 		*src = 0;
 
 		char *newValue; newValue = Tcl_SetVar(interp, (char *)argPtr[3], p, flags);
@@ -421,7 +421,7 @@ __device__ int Tcl_RenameCmd(ClientData dummy, Tcl_Interp *interp, int argc, con
 		Tcl_AppendResult(interp, "can't rename \"", args[1], "\":  command doesn't exist", (char *)NULL);
 		return TCL_ERROR;
 	}
-	register Command *cmdPtr = (Command *)Tcl_GetHashValue(hPtr);
+	Command *cmdPtr = (Command *)Tcl_GetHashValue(hPtr);
 	Tcl_DeleteHashEntry(hPtr);
 	int new_;
 	hPtr = Tcl_CreateHashEntry(&iPtr->commandTable, (char *)args[2], &new_);
@@ -476,7 +476,7 @@ __device__ int Tcl_ScanCmd(ClientData dummy, Tcl_Interp *interp, int argc, const
 		char *location;		// Where field will be stored.
 	} Field;
 	Field fields[MAX_FIELDS];	// Info about all the fields in the format string.
-	register Field *curField;
+	Field *curField;
 	if (argc < 3) {
 		Tcl_AppendResult(interp, "wrong # args: should be \"", args[0], " string format ?varName varName ...?\"", (char *)NULL);
 		return TCL_ERROR;
@@ -490,7 +490,7 @@ __device__ int Tcl_ScanCmd(ClientData dummy, Tcl_Interp *interp, int argc, const
 	int arg1Length = (strlen(args[1]) + 4) & ~03; // Number of bytes in argument to be scanned.  This gives an upper limit on string field sizes.
 	int numFields = 0; // Number of fields actually specified.
 	int totalSize = 0; // Number of bytes needed to store all results combined.
-	for (register char *fmt = (char *)args[2]; *fmt != 0; fmt++) {
+	for (char *fmt = (char *)args[2]; *fmt != 0; fmt++) {
 		if (*fmt != '%') {
 			continue;
 		}
@@ -664,7 +664,7 @@ __device__ int Tcl_SplitCmd(ClientData dummy, Tcl_Interp *interp, int argc, cons
 		return TCL_ERROR;
 	}
 	// Handle the special case of splitting on every character.
-	register char *p;
+	char *p;
 	if (*splitChars == 0) {
 		char string[2];
 		string[1] = 0;
@@ -678,7 +678,7 @@ __device__ int Tcl_SplitCmd(ClientData dummy, Tcl_Interp *interp, int argc, cons
 	char *elementStart;
 	for (p = elementStart = (char *)args[1]; *p != 0; p++) {
 		char c = *p;
-		for (register char *p2 = splitChars; *p2 != 0; p2++) {
+		for (char *p2 = splitChars; *p2 != 0; p2++) {
 			if (*p2 == c) {
 				*p = 0;
 				Tcl_AppendElement(interp, elementStart, 0);
@@ -713,10 +713,10 @@ __device__ int Tcl_StringCmd(ClientData dummy, Tcl_Interp *interp, int argc, con
 		Tcl_AppendResult(interp, "wrong # args: should be \"", args[0], " option arg ?arg ...?\"", (char *)NULL);
 		return TCL_ERROR;
 	}
-	register char c = args[1][0];
+	char c = args[1][0];
 	int length = strlen(args[1]);
 	int match;
-	register char *p;
+	char *p;
 	int first, left = 0, right = 0;
 	if (c == 'c' && !strncmp(args[1], "compare", length)) {
 		if (argc != 4) {
@@ -897,7 +897,7 @@ __device__ int Tcl_StringCmd(ClientData dummy, Tcl_Interp *interp, int argc, con
 	}
 	else if (c == 't' && !strncmp(args[1], "trim", length) && length == 4) {
 		left = right = 1;
-		register char *checkPtr;
+		char *checkPtr;
 	trim:
 		char *trimChars;
 		if (argc == 4) {

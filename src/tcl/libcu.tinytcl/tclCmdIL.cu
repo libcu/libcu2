@@ -141,7 +141,7 @@ __device__ int Tcl_IncrCmd(ClientData dummy, Tcl_Interp *interp, int argc, const
 *----------------------------------------------------------------------
 */
 __device__ int Tcl_InfoCmd(ClientData dummy, Tcl_Interp *interp, int argc, const char *args[]) {
-	register Interp *iPtr = (Interp *)interp;
+	Interp *iPtr = (Interp *)interp;
 	int length;
 	char c;
 	Arg *argPtr;

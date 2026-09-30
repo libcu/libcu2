@@ -40,9 +40,9 @@ typedef int(*__compar_fn_t)(const void *, const void *);
 #ifdef __CUDA_ARCH__
 __BEGIN_DECLS;
 
-extern __device__ unsigned long __strtol(register const char *__restrict str, char **__restrict endptr, int base, int sflag);
+extern __device__ unsigned long __strtol(const char *__restrict str, char **__restrict endptr, int base, int sflag);
 #if defined(ULLONG_MAX)
-extern __device__ unsigned long long __strtoll(register const char *__restrict str, char **__restrict endptr, int base, int sflag);
+extern __device__ unsigned long long __strtoll(const char *__restrict str, char **__restrict endptr, int base, int sflag);
 #endif
 
 //__BEGIN_NAMESPACE_STD;

@@ -41,7 +41,7 @@ __device__ size_t strftime_(char *__restrict s, size_t maxsize, const char *__re
 
 /* Return the `struct tm' representation of *TIMER in Universal Coordinated Time (aka Greenwich Mean Time).  */
 __device__ struct tm *gmtime_(const time_t *timer) {
-	register struct tm *ptm = &__time_tm;
+	struct tm *ptm = &__time_tm;
 	_t2tm(timer, 0, ptm);
 	return ptm;
 }
@@ -68,14 +68,14 @@ __device__ char *asctime_(const struct tm *tp) {
 static __constant__ const unsigned short __t2tm_vals[] = { 60, 60, 24, 7 /* special */, 36524, 1461, 365, 0 };
 static __constant__ const unsigned char __t2tm_days[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, /* non-leap */ 29, };
 static __device__ tm *_t2tm(const time_t *__restrict timer, int offset, struct tm *__restrict r) {
-	register int *p;
+	int *p;
 	time_t t1, t, v;
 	int wday;
 	{
 		t = *timer;
 		p = (int *)r;
 		p[7] = 0;
-		register const unsigned short *vp = __t2tm_vals;
+		const unsigned short *vp = __t2tm_vals;
 		do {
 			if ((v = *vp) == 7) {
 				/* Valid range for t is [-784223472856L, 784223421720L]. Outside of this range, the tm_year field will overflow. */
@@ -116,7 +116,7 @@ static __device__ tm *_t2tm(const time_t *__restrict timer, int offset, struct t
 	*p = ((((p[-2] << 2) + p[-1]) * 25 + p[0]) << 2) + (p[1] - 299); /* tm_year */
 	p[1] = wday;				/* r[6] .. tm_wday */
 	{
-		register const unsigned char *d = __t2tm_days;
+		const unsigned char *d = __t2tm_days;
 		wday = 1900 + *p;
 		if (__isleap(wday))
 			d += 11;

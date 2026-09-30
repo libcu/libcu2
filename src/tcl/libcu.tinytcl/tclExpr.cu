@@ -127,7 +127,7 @@ static __device__ int ExprTopLevel(Tcl_Interp *interp, char *string, Value *valu
 */
 static __device__ int ExprParseString(Tcl_Interp *interp, char *string, Value *valuePtr) {
 	// Try to convert the string to a number.
-	register char c = *string;
+	char c = *string;
 	if ((c >= '0' && c <= '9') || c == '-' || c == '.') {
 		char *term;
 		valuePtr->type = TYPE_INT;
@@ -187,10 +187,10 @@ static __device__ int ExprParseString(Tcl_Interp *interp, char *string, Value *v
 *
 *----------------------------------------------------------------------
 */
-static __device__ int ExprLex(Tcl_Interp *interp, register ExprInfo *infoPtr, register Value *valuePtr) {
+static __device__ int ExprLex(Tcl_Interp *interp, ExprInfo *infoPtr, Value *valuePtr) {
 	int result;
-	register char *p = infoPtr->expr;
-	register char c = *p;
+	char *p = infoPtr->expr;
+	char c = *p;
 	while (isspace(c)) {
 		p++;
 		c = *p;
@@ -414,7 +414,7 @@ static __device__ int ExprLex(Tcl_Interp *interp, register ExprInfo *infoPtr, re
 *
 *----------------------------------------------------------------------
 */
-static __device__ int ExprGetValue(Tcl_Interp *interp, register ExprInfo *infoPtr, int prec, Value *valuePtr) {
+static __device__ int ExprGetValue(Tcl_Interp *interp, ExprInfo *infoPtr, int prec, Value *valuePtr) {
 	Interp *iPtr = (Interp *)interp;
 	int operator_; // Current operator (either unary or binary).
 	int badType; // Type of offending argument;  used for error messages.
@@ -863,7 +863,7 @@ illegalType:
 *
 *--------------------------------------------------------------
 */
-static __device__ void ExprMakeString(register Value *valuePtr) {
+static __device__ void ExprMakeString(Value *valuePtr) {
 	int shortfall = 150 - (int)(valuePtr->pv.end - valuePtr->pv.buffer);
 	if (shortfall > 0) {
 		(*valuePtr->pv.expandProc)(&valuePtr->pv, shortfall);

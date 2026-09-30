@@ -359,7 +359,7 @@ static PIDTYPE StartProcess(char **argv, char *env, FDTYPE inputId, FDTYPE outpu
 
 static void ReapDetachedPids() {
 	int count, dest = 0;
-	register WaitInfo_t *info;
+	WaitInfo_t *info;
 	for (info = _waitInfo.table, count = _waitInfo.used; count > 0; info++, count--) {
 		if (info->flags & WI_DETACHED) {
 			int status;

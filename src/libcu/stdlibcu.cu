@@ -421,7 +421,7 @@ __device__ long double strtold_(const Wchar *__restrict str, Wchar **__restrict 
 
 #pragma region stdlib_strto
 
-__device__ unsigned long __strtol(register const Wchar *__restrict str, Wchar **__restrict endptr, int base, int sflag) {
+__device__ unsigned long __strtol(const Wchar *__restrict str, Wchar **__restrict endptr, int base, int sflag) {
 	unsigned long number, cutoff;
 #if _STRTO_ENDPTR
 	const Wchar *fail_char;
@@ -505,7 +505,7 @@ __device__ unsigned long __strtol(register const Wchar *__restrict str, Wchar **
 	return negative ? (unsigned long)(-((long)number)) : number;
 }
 
-__device__ unsigned long long __strtoll(register const Wchar * __restrict str, Wchar ** __restrict endptr, int base, int sflag) {
+__device__ unsigned long long __strtoll(const Wchar * __restrict str, Wchar ** __restrict endptr, int base, int sflag) {
 	unsigned long long number;
 #if _STRTO_ENDPTR
 	const Wchar *fail_char;
@@ -714,9 +714,9 @@ __device__ int unsetenv_(const char *name) {
 }
 
 #ifndef LIBCU_LEAN_FSYSTEM
-static __device__ int __maketemp(char *template_, register int *fd) {
+static __device__ int __maketemp(char *template_, int *fd) {
 	int rnd = rand_();
-	register char *start, *c;
+	char *start, *c;
 	for (c = template_; *c; ++c) {}
 	while (*--c == 'X') { *c = (rnd % 10) + '0'; rnd /= 10; }
 	dirEnt_t *ent; int r;
@@ -796,9 +796,9 @@ __device__ void *bsearch_(const void *key, const void *base, size_t nmemb, size_
 #define MIN(a, b) ((a) < (b) ? a : b)
 #define SWAPCODE(TYPE, parmi, parmj, n) { \
 	long i = (n) / sizeof(TYPE); \
-	register TYPE *pi = (TYPE *)(parmi); \
-	register TYPE *pj = (TYPE *)(parmj); \
-	do { register TYPE t = *pi; *pi++ = *pj; *pj++ = t; } while (--i > 0); \
+	TYPE *pi = (TYPE *)(parmi); \
+	TYPE *pj = (TYPE *)(parmj); \
+	do { TYPE t = *pi; *pi++ = *pj; *pj++ = t; } while (--i > 0); \
 }
 #define SWAPINIT(a, size) swaptype = (((char*)a-(char*)0)%sizeof(long)||size%sizeof(long)?2:(size==sizeof(long)?0:1));
 __forceinline__ __device__ void swapfunc(char *a, char *b, int n, int swaptype) {

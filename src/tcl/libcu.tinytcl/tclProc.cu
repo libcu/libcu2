@@ -33,8 +33,8 @@ __device__ int Tcl_ProcCmd(ClientData dummy, Tcl_Interp *interp, int argc, const
 		Tcl_AppendResult(interp, "wrong # args: should be \"", args[0], " name args body\"", (char *)NULL);
 		return TCL_ERROR;
 	}
-	register Arg *argPtr = NULL; // Initialization not needed, but prevents compiler warning.
-	register Proc *procPtr = (Proc *)_allocFast(sizeof(Proc));
+	Arg *argPtr = NULL; // Initialization not needed, but prevents compiler warning.
+	Proc *procPtr = (Proc *)_allocFast(sizeof(Proc));
 	procPtr->command = (char *)_allocFast((unsigned)strlen(args[3]) + 1);
 	strcpy(procPtr->command, args[3]);
 	procPtr->argPtr = NULL;
@@ -132,7 +132,7 @@ procError:
 *----------------------------------------------------------------------
 */
 __device__ int TclGetFrame(Tcl_Interp *interp, char *string, CallFrame **framePtrPtr) {
-	register Interp *iPtr = (Interp *)interp;
+	Interp *iPtr = (Interp *)interp;
 	if (iPtr->varFramePtr == NULL) {
 		iPtr->result = (char *)"already at top level";
 		return -1;
@@ -194,7 +194,7 @@ __device__ int TclGetFrame(Tcl_Interp *interp, char *string, CallFrame **framePt
 *----------------------------------------------------------------------
 */
 __device__ int Tcl_UplevelCmd(ClientData dummy, Tcl_Interp *interp, int argc, const char *args[]) {
-	register Interp *iPtr = (Interp *)interp;
+	Interp *iPtr = (Interp *)interp;
 	if (argc < 2) {
 	uplevelSyntax:
 		Tcl_AppendResult(interp, "wrong # args: should be \"", args[0], " ?level? command ?arg ...?\"", (char *)NULL);
@@ -300,8 +300,8 @@ __device__ Proc *TclIsProc(Command *cmdPtr) {
 *----------------------------------------------------------------------
 */
 static __device__ int InterpProc(ClientData clientData, Tcl_Interp *interp, int argc, const char *args[]) {
-	register Proc *procPtr = (Proc *)clientData;
-	register Interp *iPtr = (Interp *)interp;
+	Proc *procPtr = (Proc *)clientData;
+	Interp *iPtr = (Interp *)interp;
 	int result;
 
 	// Set up a call frame for the new procedure invocation.
@@ -321,7 +321,7 @@ static __device__ int InterpProc(ClientData clientData, Tcl_Interp *interp, int 
 	iPtr->varFramePtr = &frame;
 
 	// Match the actual arguments against the procedure's formal parameters to compute local variables.
-	register Arg *argPtr;
+	Arg *argPtr;
 	const char **args2;
 	for (argPtr = procPtr->argPtr, args2 = args + 1, argc -= 1; argPtr != NULL; argPtr = argPtr->nextPtr, args2++, argc--) {
 		// Handle the special case of the last formal being "args".  When it occurs, assign it a list consisting of all the remaining actual arguments.
@@ -414,10 +414,10 @@ procDone:
 *----------------------------------------------------------------------
 */
 static __device__ void ProcDeleteProc(ClientData clientData) {
-	register Proc *procPtr = (Proc *)clientData;
+	Proc *procPtr = (Proc *)clientData;
 	if (--procPtr->uses <= 0) {
 		_freeFast((char *)procPtr->command);
-		for (register Arg *argPtr = procPtr->argPtr; argPtr != NULL;) {
+		for (Arg *argPtr = procPtr->argPtr; argPtr != NULL;) {
 			Arg *nextPtr = argPtr->nextPtr;
 			_freeFast((char *)argPtr);
 			argPtr = nextPtr;

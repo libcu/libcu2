@@ -10,8 +10,8 @@
 #include <ext/station.h>
 
 void stationCommand::dump() {
-	register unsigned char *b = (unsigned char *)&data;
-	register int l = length;
+	unsigned char *b = (unsigned char *)&data;
+	int l = length;
 	printf("Cmd: %d[%d]'", 0, l); for (int i = 0; i < l; i++) printf("%02x", b[i] & 0xff); printf("'\n");
 }
 

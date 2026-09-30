@@ -12,7 +12,7 @@ static __device__ group *__grpIdx = nullptr;
 /* get group database entry for a group ID */
 __device__ struct group *getgrgid_(gid_t gid) {
 #if __OS_WIN
-	register group *p = __grps;
+	group *p = __grps;
 	while (p->gr_name && p->gr_gid != gid) p++;
 	return (p->gr_name ? p : nullptr);
 #elif __OS_UNIX
@@ -24,7 +24,7 @@ __device__ struct group *getgrgid_(gid_t gid) {
 __device__ struct group *getgrnam_(const char *name) {
 #if __OS_WIN
 	if (!name) return nullptr;
-	register group *p = __grps;
+	group *p = __grps;
 	while (p->gr_name && strcmp(p->gr_name, name)) *p++;
 	return (p->gr_name ? p : nullptr);
 #elif __OS_UNIX

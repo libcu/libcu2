@@ -25,14 +25,14 @@
 #include <ext/mutex.h>
 
 void sentinelCommand::dump() {
-	register unsigned char *b = (unsigned char *)&data;
-	register int l = length;
+	unsigned char *b = (unsigned char *)&data;
+	int l = length;
 	printf("cmd: %d[%d]'", ((sentinelMessage*)data)->op, l); for (int i = 0; i < l; i++) printf("%02x", b[i] & 0xff); printf("'\n");
 }
 
 void sentinelMap::dump() {
-	register unsigned char *b = (unsigned char *)this;
-	register int l = sizeof(sentinelMap);
+	unsigned char *b = (unsigned char *)this;
+	int l = sizeof(sentinelMap);
 	printf("map: 0x%p[%d]'", b, l); for (int i = 0; i < l; i++) printf("%02x", b[i] & 0xff); printf("'\n");
 }
 

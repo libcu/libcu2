@@ -76,12 +76,12 @@ static __device__ char *EnvTraceProc(ClientData clientData, Tcl_Interp *interp, 
 		if ((flags & (TCL_TRACE_UNSETS | TCL_TRACE_DESTROYED)) != (TCL_TRACE_UNSETS | TCL_TRACE_DESTROYED)) {
 			panic("EnvTraceProc called with confusing arguments");
 		}
-		register EnvInterp *eiPtr = _firstInterpPtr;
+		EnvInterp *eiPtr = _firstInterpPtr;
 		if (eiPtr->interp == interp) {
 			_firstInterpPtr = eiPtr->nextPtr;
 		}
 		else {
-			register EnvInterp *prevPtr;
+			EnvInterp *prevPtr;
 			for (prevPtr = eiPtr, eiPtr = eiPtr->nextPtr; ; prevPtr = eiPtr, eiPtr = eiPtr->nextPtr) {
 				if (eiPtr == NULL) {
 					panic("EnvTraceProc couldn't find interpreter");

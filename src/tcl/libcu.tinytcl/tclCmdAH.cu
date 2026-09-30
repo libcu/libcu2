@@ -84,7 +84,7 @@ __device__ int Tcl_CaseCmd(ClientData dummy, Tcl_Interp *interp, int argc, const
 		}
 
 		// Check for special case of single pattern (no list) with no backslash sequences.
-		register char *p;
+		char *p;
 		for (p = (char *)caseArgs[i]; *p != 0; p++) {
 			if (isspace(*p) || *p == '\\') {
 				break;
@@ -455,7 +455,7 @@ __device__ int Tcl_ForeachCmd(ClientData dummy, Tcl_Interp *interp, int argc, co
 *----------------------------------------------------------------------
 */
 __device__ int Tcl_FormatCmd(ClientData dummy, Tcl_Interp *interp, int argc, const char *args[]) {
-	register char *format;	// Used to read characters from the format string.
+	char *format;	// Used to read characters from the format string.
 	char newFormat[40];		// A new format specifier is generated here.
 	int width;			// Field width from field specifier, or 0 if no width given.
 	int precision;		// Field precision from field specifier, or 0 if no precision given.
@@ -483,12 +483,12 @@ __device__ int Tcl_FormatCmd(ClientData dummy, Tcl_Interp *interp, int argc, con
 	const char **curArg = args + 2; // Remainder of args array.
 	argc -= 2;
 	for (format = (char *)args[1]; *format != 0; ) {
-		register char *newPtr = newFormat;
+		char *newPtr = newFormat;
 		width = precision = useTwoWords = noPercent = valSize = 0;
 
 		// Get rid of any characters before the next field specifier. Collapse backslash sequences found along the way.
 		if (*format != '%') {
-			register char *p;
+			char *p;
 			oneWordValue = p = format;
 			while (*format != '%' && *format != 0) {
 				if (*format == '\\') {

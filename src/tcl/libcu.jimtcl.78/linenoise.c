@@ -652,7 +652,7 @@ static void DRL_STR(const char *str)
 static void linenoiseAtExit(void);
 static struct termios orig_termios; /* in order to restore at exit */
 static int rawmode = 0; /* for atexit() function to check if restore is needed*/
-static int atexit_registered = 0; /* register atexit just 1 time */
+static int atexit_registered = 0; /* atexit just 1 time */
 
 static const char *unsupported_term[] = {"dumb","cons25","emacs",NULL};
 

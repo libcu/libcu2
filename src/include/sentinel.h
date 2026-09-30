@@ -37,8 +37,6 @@ THE SOFTWARE.
 extern "C" {
 #endif
 
-#define HAS_HOSTSENTINEL 0
-
 #ifndef HAS_DEVICESENTINEL
 #define HAS_DEVICESENTINEL 1
 #endif

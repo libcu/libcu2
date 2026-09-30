@@ -77,7 +77,10 @@ extern __forceinline__ __device__ int toupper_(int c) { return c & ~(__curtCtype
 #ifdef __APPLE__
 #define __tolower tolower_
 #define __toupper toupper_
-#elif __OS_UNIX && !defined(_tolower)
+#elif __OS_UNIX
+/* glibc defines these through __ctype_tolower_loc, which exists only on the host. */
+#undef _tolower
+#undef _toupper
 #define _tolower(c) (char)((c)-'A'+'a')
 #define _toupper(c) (char)((c)-'a'+'A')
 #endif

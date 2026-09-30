@@ -23,7 +23,7 @@ __device__ off_t lseek_(int fd, off_t offset, int whence) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register file_t *s = GETFILE(fd);
+	file_t *s = GETFILE(fd);
 	dirEnt_t *f;
 	if (!s || !(f = (dirEnt_t *)s->base))
 		panic("lseek: !stream");
@@ -42,7 +42,7 @@ __device__ off64_t lseek64_(int fd, off64_t offset, int whence) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register file_t *s = GETFILE(fd);
+	file_t *s = GETFILE(fd);
 	dirEnt_t *f;
 	if (!s || !(f = (dirEnt_t *)s->base))
 		panic("lseek: !stream");
@@ -64,7 +64,7 @@ __device__ size_t read_(int fd, void *buf, size_t nbytes, bool wait) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register file_t *s = GETFILE(fd);
+	file_t *s = GETFILE(fd);
 	dirEnt_t *f;
 	if (!s || !(f = (dirEnt_t *)s->base))
 		panic("read: !stream");
@@ -81,7 +81,7 @@ __device__ size_t write_(int fd, const void *buf, size_t nbytes, bool wait) {
 #ifdef LIBCU_LEAN_FSYSTEM
 	return panic_no_fsystem();
 #else
-	register file_t *s = GETFILE(fd);
+	file_t *s = GETFILE(fd);
 	dirEnt_t *f;
 	if (!s || !(f = (dirEnt_t *)s->base))
 		panic("write: !stream");

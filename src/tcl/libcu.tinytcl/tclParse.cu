@@ -104,7 +104,7 @@ static __device__ char *VarNameEnd(char *string);
 *----------------------------------------------------------------------
 */
 __device__ char Tcl_Backslash(const char *src, int *readPtr) {
-	register const char *p = src + 1;
+	const char *p = src + 1;
 	char result;
 	int count = 2;
 	switch (*p) {
@@ -222,8 +222,8 @@ __device__ char Tcl_Backslash(const char *src, int *readPtr) {
 *--------------------------------------------------------------
 */
 __device__ int TclParseQuotes(Tcl_Interp *interp, char *string, int termChar, int flags, char **termPtr, ParseValue *pvPtr) {
-	register char *src = string;
-	register char *dst = pvPtr->next;
+	char *src = string;
+	char *dst = pvPtr->next;
 	while (true) {
 		if (dst == pvPtr->end) {
 			// Target buffer space is about to run out.  Make more space.
@@ -312,7 +312,7 @@ __device__ int TclParseQuotes(Tcl_Interp *interp, char *string, int termChar, in
 *
 *--------------------------------------------------------------
 */
-__device__ int TclParseNestedCmd(Tcl_Interp *interp, char *string, int flags, char **termPtr, register ParseValue *pvPtr) {
+__device__ int TclParseNestedCmd(Tcl_Interp *interp, char *string, int flags, char **termPtr, ParseValue *pvPtr) {
 	Interp *iPtr = (Interp *)interp;
 	int result = Tcl_Eval(interp, string, flags | TCL_BRACKET_TERM, termPtr);
 	if (result != TCL_OK) {
@@ -354,14 +354,14 @@ __device__ int TclParseNestedCmd(Tcl_Interp *interp, char *string, int flags, ch
 *
 *--------------------------------------------------------------
 */
-__device__ int TclParseBraces(Tcl_Interp *interp, char *string, char **termPtr, register ParseValue *pvPtr) {
-	register char *src = string;
-	register char *dst = pvPtr->next;
-	register char *end = pvPtr->end;
+__device__ int TclParseBraces(Tcl_Interp *interp, char *string, char **termPtr, ParseValue *pvPtr) {
+	char *src = string;
+	char *dst = pvPtr->next;
+	char *end = pvPtr->end;
 	int level = 1;
 	// Copy the characters one at a time to the result area, stopping when the matching close-brace is found.
 	while (true) {
-		register int c = *src;
+		int c = *src;
 		src++;
 		if (dst == end) {
 			pvPtr->next = dst;
@@ -448,17 +448,17 @@ __device__ int TclParseBraces(Tcl_Interp *interp, char *string, char **termPtr, 
 *
 *--------------------------------------------------------------
 */
-__device__ int TclParseWords(Tcl_Interp *interp, char *string, int flags, int maxWords, char **termPtr, int *argcPtr, const char *args[], register ParseValue *pvPtr) {
+__device__ int TclParseWords(Tcl_Interp *interp, char *string, int flags, int maxWords, char **termPtr, int *argcPtr, const char *args[], ParseValue *pvPtr) {
 	int result;
-	register char *src = string;
+	char *src = string;
 	char *oldBuffer = pvPtr->buffer; // Used to detect when pvPtr's buffer gets reallocated, so we can adjust all of the args pointers.
-	register char *dst = pvPtr->next;
+	char *dst = pvPtr->next;
 	int argc;
 	for (argc = 0; argc < maxWords; argc++) {
 		args[argc] = dst;
 		// Skip leading space.
 	skipSpace:
-		register int c = *src;
+		int c = *src;
 		int type = CHAR_TYPE(c);
 		while (type == TCL_SPACE) { src++; c = *src; type = CHAR_TYPE(c); }
 		// Handle the normal case (i.e. no leading double-quote or brace).
@@ -610,7 +610,7 @@ done:
 *
 *--------------------------------------------------------------
 */
-__device__ void TclExpandParseValue(register ParseValue *pvPtr, int needed) {
+__device__ void TclExpandParseValue(ParseValue *pvPtr, int needed) {
 	// Either double the size of the buffer or add enough new space to meet the demand, whichever produces a larger new buffer.
 	int newSpace = (int)(pvPtr->end - pvPtr->buffer) + 1;
 	if (newSpace < needed) {
@@ -649,7 +649,7 @@ __device__ void TclExpandParseValue(register ParseValue *pvPtr, int needed) {
 */
 __device__ char *TclWordEnd(char *start, int nested) {
 	int count;
-	register char *p = start;
+	char *p = start;
 	while (isspace(*p)) {
 		p++;
 	}
@@ -749,7 +749,7 @@ __device__ char *TclWordEnd(char *start, int nested) {
 *----------------------------------------------------------------------
 */
 static __device__ char *QuoteEnd(char *string, int term) {
-	register char *p = string;
+	char *p = string;
 	int count;
 	while (*p != term) {
 		if (*p == '\\') {
@@ -798,7 +798,7 @@ static __device__ char *QuoteEnd(char *string, int term) {
 *----------------------------------------------------------------------
 */
 static __device__ char *VarNameEnd(char *string) {
-	register char *p = string + 1;
+	char *p = string + 1;
 	if (*p == '{') {
 		for (p++; (*p != '}') && (*p != 0); p++) {} // Empty loop body.
 		return p;
@@ -832,7 +832,7 @@ static __device__ char *VarNameEnd(char *string) {
 *
 *----------------------------------------------------------------------
 */
-__device__ char *Tcl_ParseVar(Tcl_Interp *interp, register char *string, char **termPtr) {
+__device__ char *Tcl_ParseVar(Tcl_Interp *interp, char *string, char **termPtr) {
 #define NUM_CHARS 200
 	char copyStorage[NUM_CHARS];
 	/*
@@ -845,7 +845,7 @@ __device__ char *Tcl_ParseVar(Tcl_Interp *interp, register char *string, char **
 	*/
 	ParseValue pv;
 	char *name1, *name1End, *result;
-	register char *name2 = NULL;
+	char *name2 = NULL;
 	string++;
 	if (*string == '{') {
 		string++;

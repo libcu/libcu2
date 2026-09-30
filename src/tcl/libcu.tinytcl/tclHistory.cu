@@ -79,7 +79,7 @@ static __device__ int SubsAndEval(Interp *iPtr, char *cmd, char *old, char *new_
 *
 *----------------------------------------------------------------------
 */
-static __device__ void InitHistory(register Interp *iPtr) {
+static __device__ void InitHistory(Interp *iPtr) {
 	if (iPtr->numEvents != 0) {
 		return;
 	}
@@ -111,7 +111,7 @@ static __device__ void InitHistory(register Interp *iPtr) {
 *----------------------------------------------------------------------
 */
 __device__ int Tcl_RecordAndEval(Tcl_Interp *interp, char *cmd, int flags) {
-	register Interp *iPtr = (Interp *)interp;
+	Interp *iPtr = (Interp *)interp;
 	if (iPtr->numEvents == 0) {
 		InitHistory(iPtr);
 	}
@@ -130,7 +130,7 @@ __device__ int Tcl_RecordAndEval(Tcl_Interp *interp, char *cmd, int flags) {
 	if (iPtr->curEvent >= iPtr->numEvents) {
 		iPtr->curEvent = 0;
 	}
-	register HistoryEvent *eventPtr = &iPtr->events[iPtr->curEvent];
+	HistoryEvent *eventPtr = &iPtr->events[iPtr->curEvent];
 
 	// Chop off trailing newlines before recording the command.
 	int length = strlen(cmd);
@@ -168,8 +168,8 @@ __device__ int Tcl_RecordAndEval(Tcl_Interp *interp, char *cmd, int flags) {
 *----------------------------------------------------------------------
 */
 __device__ int Tcl_HistoryCmd(ClientData dummy, Tcl_Interp *interp, int argc, const char *args[]) {
-	register Interp *iPtr = (Interp *)interp;
-	register HistoryEvent *eventPtr;
+	Interp *iPtr = (Interp *)interp;
+	HistoryEvent *eventPtr;
 	if (iPtr->numEvents == 0) {
 		InitHistory(iPtr);
 	}
@@ -427,8 +427,8 @@ static __device__ void MakeSpace(HistoryEvent *hPtr, int size) {
 *
 *----------------------------------------------------------------------
 */
-static __device__ void InsertRev(Interp *iPtr, register HistoryRev *revPtr) {
-	register HistoryRev *curPtr, *prevPtr;
+static __device__ void InsertRev(Interp *iPtr, HistoryRev *revPtr) {
+	HistoryRev *curPtr, *prevPtr;
 	for (curPtr = iPtr->revPtr, prevPtr = NULL; curPtr != NULL; prevPtr = curPtr, curPtr = curPtr->nextPtr) {
 		// If this revision includes the new one (or vice versa) then just eliminate the one that is a subset of the other.
 		if (revPtr->firstIndex <= curPtr->firstIndex && revPtr->lastIndex >= curPtr->firstIndex) {
@@ -475,11 +475,11 @@ static __device__ void InsertRev(Interp *iPtr, register HistoryRev *revPtr) {
 *
 *----------------------------------------------------------------------
 */
-static __device__ void RevCommand(register Interp *iPtr, char *string) {
+static __device__ void RevCommand(Interp *iPtr, char *string) {
 	if (iPtr->evalFirst == NULL || iPtr->revDisables > 0) {
 		return;
 	}
-	register HistoryRev *revPtr = (HistoryRev *)_allocFast(sizeof(HistoryRev));
+	HistoryRev *revPtr = (HistoryRev *)_allocFast(sizeof(HistoryRev));
 	revPtr->firstIndex = (int)(iPtr->evalFirst - iPtr->historyFirst);
 	revPtr->lastIndex = (int)(iPtr->evalLast - iPtr->historyFirst);
 	revPtr->newSize = strlen(string);
@@ -503,7 +503,7 @@ static __device__ void RevCommand(register Interp *iPtr, char *string) {
 *
 *----------------------------------------------------------------------
 */
-static __device__ void RevResult(register Interp *iPtr, char *string) {
+static __device__ void RevResult(Interp *iPtr, char *string) {
 	if (iPtr->evalFirst == NULL || iPtr->revDisables > 0) {
 		return;
 	}
@@ -527,7 +527,7 @@ static __device__ void RevResult(register Interp *iPtr, char *string) {
 		return;
 	}
 
-	register HistoryRev *revPtr = (HistoryRev *)_allocFast(sizeof(HistoryRev));
+	HistoryRev *revPtr = (HistoryRev *)_allocFast(sizeof(HistoryRev));
 	revPtr->firstIndex = (int)(evalFirst - iPtr->historyFirst);
 	revPtr->lastIndex = (int)(evalLast - iPtr->historyFirst);
 	const char *args[2];
@@ -551,15 +551,15 @@ static __device__ void RevResult(register Interp *iPtr, char *string) {
 *
 *----------------------------------------------------------------------
 */
-static __device__ void DoRevs(register Interp *iPtr) {
+static __device__ void DoRevs(Interp *iPtr) {
 	if (iPtr->revPtr == NULL) {
 		return;
 	}
 	// The revision is done in two passes.  The first pass computes the amount of space needed for the revised event, and the second pass
 	// pieces together the new event and frees up the revisions.
-	register HistoryEvent *eventPtr = &iPtr->events[iPtr->curEvent];
+	HistoryEvent *eventPtr = &iPtr->events[iPtr->curEvent];
 	unsigned int size = strlen(eventPtr->command) + 1;
-	register HistoryRev *revPtr;
+	HistoryRev *revPtr;
 	for (revPtr = iPtr->revPtr; revPtr != NULL; revPtr = revPtr->nextPtr) {
 		size -= revPtr->lastIndex + 1 - revPtr->firstIndex;
 		size += revPtr->newSize;
@@ -605,7 +605,7 @@ static __device__ void DoRevs(register Interp *iPtr) {
 *
 *----------------------------------------------------------------------
 */
-static __device__ HistoryEvent *GetEvent(register Interp *iPtr, char *string) {
+static __device__ HistoryEvent *GetEvent(Interp *iPtr, char *string) {
 	// First check for a numeric specification of an event.
 	int index;
 	if (isdigit(*string) || *string == '-') {
@@ -640,7 +640,7 @@ static __device__ HistoryEvent *GetEvent(register Interp *iPtr, char *string) {
 		if (index == iPtr->curEvent) {
 			break;
 		}
-		register HistoryEvent *eventPtr = &iPtr->events[index];
+		HistoryEvent *eventPtr = &iPtr->events[index];
 		if (!strncmp(eventPtr->command, string, (size_t)length) || Tcl_StringMatch(eventPtr->command, string)) {
 			return eventPtr;
 		}
@@ -664,7 +664,7 @@ static __device__ HistoryEvent *GetEvent(register Interp *iPtr, char *string) {
 *
 *----------------------------------------------------------------------
 */
-static __device__ int SubsAndEval(register Interp *iPtr, char *cmd, char *old, char *new_) {
+static __device__ int SubsAndEval(Interp *iPtr, char *cmd, char *old, char *new_) {
 	// Figure out how much space it will take to hold the substituted command (and complain if the old string doesn't appear in the original command).
 	int oldLength = strlen(old);
 	int newLength = strlen(new_);
@@ -721,7 +721,7 @@ static __device__ int SubsAndEval(register Interp *iPtr, char *cmd, char *old, c
 *
 *----------------------------------------------------------------------
 */
-static __device__ char *GetWords(register Interp *iPtr, char *command, char *words) {
+static __device__ char *GetWords(Interp *iPtr, char *command, char *words) {
 	// Figure out whether we're looking for a numerical range or for a pattern.
 	char *pattern = NULL;
 	int first = 0; // First word desired. -1 means last word only.
@@ -763,7 +763,7 @@ static __device__ char *GetWords(register Interp *iPtr, char *command, char *wor
 
 	// Scan through the words one at a time, copying those that are relevant into the result string.  Allocate a result area large enough to hold all the words if necessary.
 	int index; // Index of current word.
-	register char *next;
+	char *next;
 	char *result; result = (char *)_allocFast((unsigned)(strlen(command) + 1));
 	char *dst; dst = result;
 	for (next = command; isspace(*next); next++) {} // Empty loop body:  just find start of first word.

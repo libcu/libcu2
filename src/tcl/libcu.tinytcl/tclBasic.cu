@@ -110,7 +110,7 @@ static __constant__ CmdInfo _builtInCmds[] = {
 *----------------------------------------------------------------------
 */
 __device__ Tcl_Interp *Tcl_CreateInterp() {
-	register Interp *iPtr = (Interp *)_allocFast(sizeof(Interp));
+	Interp *iPtr = (Interp *)_allocFast(sizeof(Interp));
 	memset(iPtr, 0, sizeof(*iPtr));
 	iPtr->result = iPtr->resultSpace;
 	iPtr->freeProc = 0;
@@ -152,11 +152,11 @@ __device__ Tcl_Interp *Tcl_CreateInterp() {
 	iPtr->resultSpace[0] = 0;
 
 	// Create the built-in commands.  Do it here, rather than calling Tcl_CreateCommand, because it's faster (there's no need to check for a pre-existing command by the same name).
-	for (register CmdInfo *cmdInfoPtr = _builtInCmds; cmdInfoPtr->name != NULL; cmdInfoPtr++) {
+	for (CmdInfo *cmdInfoPtr = _builtInCmds; cmdInfoPtr->name != NULL; cmdInfoPtr++) {
 		int new_;
 		Tcl_HashEntry *hPtr = Tcl_CreateHashEntry(&iPtr->commandTable, cmdInfoPtr->name, &new_);
 		if (new_) {
-			register Command *cmdPtr = (Command *)_allocFast(sizeof(Command));
+			Command *cmdPtr = (Command *)_allocFast(sizeof(Command));
 			cmdPtr->proc = cmdInfoPtr->proc;
 			cmdPtr->clientData = (ClientData)NULL;
 			cmdPtr->deleteProc = NULL;
@@ -195,7 +195,7 @@ __device__ void Tcl_DeleteInterp(Tcl_Interp *interp) {
 	// Free up any remaining resources associated with the interpreter.
 	Tcl_HashSearch search;
 	for (Tcl_HashEntry *hPtr = Tcl_FirstHashEntry(&iPtr->commandTable, &search); hPtr != NULL; hPtr = Tcl_NextHashEntry(&search)) {
-		register Command *cmdPtr = (Command *)Tcl_GetHashValue(hPtr);
+		Command *cmdPtr = (Command *)Tcl_GetHashValue(hPtr);
 		if (cmdPtr->deleteProc != NULL) {
 			(*cmdPtr->deleteProc)(cmdPtr->clientData);
 		}
@@ -276,7 +276,7 @@ __device__ void Tcl_DeleteInterp(Tcl_Interp *interp) {
 */
 __device__ void Tcl_CreateCommand(Tcl_Interp *interp, const char *cmdName, Tcl_CmdProc *proc, ClientData clientData, Tcl_CmdDeleteProc *deleteProc) {
 	Interp *iPtr = (Interp *)interp;
-	register Command *cmdPtr;
+	Command *cmdPtr;
 	int new_;
 	Tcl_HashEntry *hPtr = Tcl_CreateHashEntry(&iPtr->commandTable, cmdName, &new_);
 	if (!new_) {
@@ -345,7 +345,7 @@ __device__ int Tcl_DeleteCommand(Tcl_Interp *interp, char *cmdName) {
 __device__ int Tcl_Eval(Tcl_Interp *interp, char *cmd, int flags, char **termPtr) {
 #define NUM_CHARS 200
 #define NUM_ARGS 10
-	register Interp *iPtr = (Interp *)interp;
+	Interp *iPtr = (Interp *)interp;
 
 	// Initialize the result to an empty string and clear out any error information.  This makes sure that we return an empty
 	// result if there are no commands in the command string.
@@ -370,7 +370,7 @@ __device__ int Tcl_Eval(Tcl_Interp *interp, char *cmd, int flags, char **termPtr
 	pv.expandProc = TclExpandParseValue;
 	pv.clientData = (ClientData)NULL;
 
-	register char *src = cmd; // Points to current character in cmd.
+	char *src = cmd; // Points to current character in cmd.
 	char termChar; // Return when this character is found (either ']' or '\0').  Zero means that newlines terminate commands.
 	if (flags & TCL_BRACKET_TERM) {
 		termChar = ']';
@@ -407,7 +407,7 @@ __device__ int Tcl_Eval(Tcl_Interp *interp, char *cmd, int flags, char **termPtr
 
 		// Skim off leading white space and semi-colons, and skip comments.
 		while (true) {
-			register int c = *src;
+			int c = *src;
 			if (CHAR_TYPE(c) != TCL_SPACE && c != ';' && c != '\n') {
 				break;
 			}
@@ -496,7 +496,7 @@ __device__ int Tcl_Eval(Tcl_Interp *interp, char *cmd, int flags, char **termPtr
 		Command *cmdPtr = (Command *)Tcl_GetHashValue(hPtr);
 
 		// Call trace procedures, if any.
-		for (register Trace *tracePtr = iPtr->tracePtr; tracePtr != NULL; tracePtr = tracePtr->nextPtr) {
+		for (Trace *tracePtr = iPtr->tracePtr; tracePtr != NULL; tracePtr = tracePtr->nextPtr) {
 			if (tracePtr->level < iPtr->numLevels) {
 				continue;
 			}
@@ -568,7 +568,7 @@ done:
 	if (result == TCL_ERROR && !(iPtr->flags & ERR_ALREADY_LOGGED)) {
 		// Compute the line number where the error occurred.
 		iPtr->errorLine = 1;
-		register char *p;
+		char *p;
 		for (p = cmd; p != cmdStart; p++) {
 			if (*p == '\n') {
 				iPtr->errorLine++;
@@ -626,8 +626,8 @@ done:
 *----------------------------------------------------------------------
 */
 __device__ Tcl_Trace Tcl_CreateTrace(Tcl_Interp *interp, int level, Tcl_CmdTraceProc *proc, ClientData clientData) {
-	register Interp *iPtr = (Interp *)interp;
-	register Trace *tracePtr = (Trace *)_allocFast(sizeof(Trace));
+	Interp *iPtr = (Interp *)interp;
+	Trace *tracePtr = (Trace *)_allocFast(sizeof(Trace));
 	tracePtr->level = level;
 	tracePtr->proc = proc;
 	tracePtr->clientData = clientData;
@@ -651,14 +651,14 @@ __device__ Tcl_Trace Tcl_CreateTrace(Tcl_Interp *interp, int level, Tcl_CmdTrace
 *----------------------------------------------------------------------
 */
 __device__ void Tcl_DeleteTrace(Tcl_Interp *interp, Tcl_Trace trace) {
-	register Interp *iPtr = (Interp *)interp;
-	register Trace *tracePtr = (Trace *)trace;
+	Interp *iPtr = (Interp *)interp;
+	Trace *tracePtr = (Trace *)trace;
 	if (iPtr->tracePtr == tracePtr) {
 		iPtr->tracePtr = tracePtr->nextPtr;
 		_freeFast((char *)tracePtr);
 	}
 	else {
-		for (register Trace *tracePtr2 = iPtr->tracePtr; tracePtr2 != NULL; tracePtr2 = tracePtr2->nextPtr) {
+		for (Trace *tracePtr2 = iPtr->tracePtr; tracePtr2 != NULL; tracePtr2 = tracePtr2->nextPtr) {
 			if (tracePtr2->nextPtr == tracePtr) {
 				tracePtr2->nextPtr = tracePtr->nextPtr;
 				_freeFast((char *)tracePtr);
@@ -684,7 +684,7 @@ __device__ void Tcl_DeleteTrace(Tcl_Interp *interp, Tcl_Trace trace) {
 *----------------------------------------------------------------------
 */
 __device__ void Tcl_AddErrorInfo(Tcl_Interp *interp, char *message) {
-	register Interp *iPtr = (Interp *)interp;
+	Interp *iPtr = (Interp *)interp;
 	// If an error is already being logged, then the new errorInfo is the concatenation of the old info and the new message.
 	// If this is the first piece of info for the error, then the new errorInfo is the concatenation of the message in interp->result and the new message.
 	if (!(iPtr->flags & ERR_IN_PROGRESS)) {
@@ -765,7 +765,7 @@ __device__ int _Tcl_VarEval(Tcl_Interp *interp, va_list va) {
 *----------------------------------------------------------------------
 */
 __device__ int TclGLOBAL_Eval(Tcl_Interp *interp, char *command) {
-	register Interp *iPtr = (Interp *)interp;
+	Interp *iPtr = (Interp *)interp;
 	CallFrame *savedVarFramePtr = iPtr->varFramePtr;
 	iPtr->varFramePtr = NULL;
 	int result = Tcl_Eval(interp, command, 0, (char **)NULL);

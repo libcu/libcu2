@@ -95,7 +95,7 @@ static __device__ int DoGlob(Tcl_Interp *interp, char *dir, char *rem) {
 	// DoGlob.  The part that's already been expanded is in "dir" (this may initially be empty), and the part still to expand
 	// is in "rem".  This procedure expands "rem" one level, making recursive calls to itself if there's still more stuff left
 	// in the remainder.
-	register char *p;
+	char *p;
 
 	// Figure out whether we'll need to add a slash between the directory name and file names within the directory when concatenating them together.
 	char *separator;
@@ -110,7 +110,7 @@ static __device__ int DoGlob(Tcl_Interp *interp, char *dir, char *rem) {
 	bool gotSpecial = false;
 	char *openBrace = NULL, *closeBrace = NULL;
 	for (p = rem; ; p++) {
-		register char c = *p;
+		char c = *p;
 		if (c == '\0' || c == '/') {
 			break;
 		}
@@ -289,7 +289,7 @@ __device__ char *Tcl_TildeSubst(Tcl_Interp *interp, char *name) {
 	static int curSize = STATIC_BUF_SIZE;
 	static char *curBuf = staticBuf;
 	int length;
-	register char *p;
+	char *p;
 
 	if (name[0] != '~') {
 		return name;

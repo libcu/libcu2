@@ -110,7 +110,7 @@ error:
 __device__ void Tcl_DetachPids(int numPids, int *pidPtr) {
 	int count;
 	int pid;
-	register WaitInfo *waitPtr;
+	WaitInfo *waitPtr;
 	for (int i = 0; i < numPids; i++) {
 		pid = pidPtr[i];
 		for (waitPtr = waitTable, count = waitTableUsed; count > 0; waitPtr++, count--) {

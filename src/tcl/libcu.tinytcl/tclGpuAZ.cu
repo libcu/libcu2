@@ -689,11 +689,11 @@ __device__ int Tcl_GetsCmd(ClientData notUsed, Tcl_Interp *interp, int argc, con
 	int totalCount = 0;
 	bool done = false;
 	int flags = 0;
-	register FILE *f = filePtr->f;
+	FILE *f = filePtr->f;
 	while (!done) {
 		char buffer[BUF_SIZE + 1];
-		register int c, count;
-		register char *p;
+		int c, count;
+		char *p;
 		for (p = buffer, count = 0; count < BUF_SIZE - 1; count++, p++) {
 			c = fgetc(f);
 			if (c == EOF) {
@@ -763,7 +763,7 @@ __device__ int Tcl_OpenCmd(ClientData notUsed, Tcl_Interp *interp, int argc, con
 		return TCL_ERROR;
 	}
 
-	register OpenFile_ *filePtr = (OpenFile_ *)_allocFast(sizeof(OpenFile_));
+	OpenFile_ *filePtr = (OpenFile_ *)_allocFast(sizeof(OpenFile_));
 	filePtr->f = NULL;
 	filePtr->f2 = NULL;
 	filePtr->readable = 0;
