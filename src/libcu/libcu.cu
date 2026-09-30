@@ -17,7 +17,6 @@
 #include "sys/timecu.cu"
 #include "ext/hash.cu"
 #include "ext/memfile.cu"
-#include "ext/mutex.cu"
 #include "grpcu.cu"
 #include "pwdcu.cu"
 #include "fsystem.cu"

@@ -66,50 +66,51 @@ static __device__ bool postfixPtrs(sentinelOutPtr *ptrsOut, sentinelCommand *cmd
 	return true;
 }
 
-__device__ volatile unsigned int _sentinelMapId;
-__constant__ const sentinelMap *_sentinelDeviceMap[SENTINEL_DEVICEMAPS];
+__device__ unsigned int _sentinelMapId;
+__constant__ sentinelMap *_sentinelDeviceMap[SENTINEL_DEVICEMAPS];
 __device__ void sentinelDeviceSend(sentinelMessage *msg, int msgLength, sentinelInPtr *ptrsIn, sentinelOutPtr *ptrsOut) {
-	const sentinelMap *map = _sentinelDeviceMap[_sentinelMapId++ % SENTINEL_DEVICEMAPS];
+	sentinelMap *map = _sentinelDeviceMap[atomicAdd(&_sentinelMapId, 1) % SENTINEL_DEVICEMAPS];
 	if (!map)
-		panic("sentinel: device map not defined. did you start sentinel?\n");
+		panic("sentinel: device map not defined. did you start sentinel?");
+	if (msgLength <= 0 || ROUND8_(msgLength) > SENTINEL_MSGSIZE)
+		panic("sentinel: msg too long (%d)", msgLength);
 
-	// ATTACH
-	long id = atomicAdd((int *)&map->setId, 1);
-	sentinelCommand *cmd = (sentinelCommand *)&map->cmds[id % SENTINEL_MSGCOUNT];
+	// ATTACH: take a ticket and own its slot once the previous occupant has released it
+	unsigned int id = mutexAdd(&map->setId, 1);
+	sentinelCommand *cmd = &map->cmds[id % SENTINEL_MSGCOUNT];
 	if (cmd->magic != SENTINEL_MAGIC)
-		panic("bad sentinel magic");
+		panic("sentinel: bad magic");
 	atomicAdd(&cmd->locks, 1);
-	volatile long *control = &cmd->control; intptr_t offset = map->offset; char *trans = nullptr;
+	int *control = &cmd->control; intptr_t offset = map->offset; char *trans = nullptr;
 	mutexSpinLock(nullptr, control, SENTINELCONTROL_NORMAL, SENTINELCONTROL_DEVICE);
-	if (cmd->locks != 1)
-		panic("bad sentinel lock");
 
 	// PREPARE
-	char *data = cmd->data + ROUND8_(msgLength), *dataEnd = data + msg->size;
+	char *data = cmd->data + ROUND8_(msgLength), *dataEnd = data + msg->size, *slotEnd = cmd->data + SENTINEL_MSGSIZE;
+	if (dataEnd > slotEnd) dataEnd = slotEnd;
 	sentinelOutPtr *listOut = nullptr;
 	if (((ptrsIn || ptrsOut) && !(data = preparePtrs(ptrsIn, ptrsOut, cmd, data, dataEnd, offset, listOut, trans))) ||
 		(msg->prepare && !msg->prepare(msg, data, dataEnd, offset)))
-		panic("msg too long");
+		panic("sentinel: msg too long (op %d)", msg->op);
 	if (listOut)
 		msg->flow |= SENTINELFLOW_TRAN;
 	cmd->length = msgLength; memcpy(cmd->data, msg, msgLength);
-	//printf("msg: %d[%d]'", msg->op, msgLength); for (int i = 0; i < msgLength; i++) printf("%02x", ((char *)msg)[i] & 0xff); printf("'\n");
 	mutexSet(control, SENTINELCONTROL_DEVICERDY);
 
-	// FLOW-WAIT
+	// FLOW-WAIT: the host answers with HOSTRDY; postfix reads results out of the slot before
+	// it is released, then the slot goes back to NORMAL (or on to the transfer-out states)
 	if (msg->flow & SENTINELFLOW_WAIT) {
 		mutexSpinLock(nullptr, control, SENTINELCONTROL_HOSTRDY, SENTINELCONTROL_DEVICEWAIT);
 		cmd->length = msgLength; memcpy(msg, cmd->data, msgLength);
 		if ((ptrsOut && !postfixPtrs(ptrsOut, cmd, offset, listOut, trans)) ||
 			(msg->postfix && !msg->postfix(msg, offset)))
-			panic("postfix error");
+			panic("sentinel: postfix error (op %d)", msg->op);
 		mutexSet(control, !listOut ? SENTINELCONTROL_NORMAL : SENTINELCONTROL_DEVICERDY);
 	}
 	atomicSub(&cmd->locks, 1);
 }
 
 static __device__ void executeTrans(char id, sentinelCommand *cmd, int size, sentinelInPtr *listIn, sentinelOutPtr *listOut, intptr_t offset, char *&trans) {
-	volatile long *control = &cmd->control;
+	int *control = &cmd->control;
 	sentinelInPtr *i; sentinelOutPtr *o; char **field; char *data = cmd->data, *ptr = trans;
 	switch (id) {
 	case 0:

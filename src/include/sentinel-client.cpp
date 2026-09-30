@@ -1,10 +1,14 @@
+// The client side of the Sentinel host bus. This is a source file meant to be #included by a
+// host program (the d* tools do), so those programs need only the libcu headers.
 #include <sentinel.h>
 #include <sentinel-hostmsg.h>
+#include <ext/mutex.h>
 #if __OS_WIN
 #include <windows.h>
 #elif __OS_UNIX
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -13,49 +17,6 @@
 #include <stdio.h>
 
 #if HAS_HOSTSENTINEL
-
-//////////////////////
-// MUTEX
-#pragma region MUTEX
-#if 0
-#include <ext/mutex.h>
-#else
-#if __OS_WIN
-#define SLEEP(MS) Sleep(MS)
-#elif __OS_UNIX
-#define SLEEP(MS) sleep(MS)
-#endif
-
-/* Mutex with exponential back-off. */
-static void mutexSpinLock(void **cancelToken, volatile long *mutex, long cmp = 0, long val = 1) {
-	long v; float ms = 32;
-#if __OS_WIN
-	while ((!cancelToken || *cancelToken) && (v = _InterlockedCompareExchange((volatile long *)mutex, cmp, val)) != cmp) {
-#elif __OS_UNIX
-	while ((!cancelToken || *cancelToken) && (v = __sync_val_compare_and_swap((long *)mutex, cmp, val)) != cmp) {
-#endif
-		SLEEP((int)ms);
-		if (ms < 256) ms *= 2;
-	}
-}
-
-/* Mutex set. */
-static void mutexSet(volatile long *mutex, long val = 0) {
-#if __OS_WIN
-	_InterlockedExchange((volatile long *)mutex, val);
-#elif __OS_UNIX
-	__sync_lock_test_and_set((long *)mutex, val);
-#endif
-}
-
-#endif
-#pragma endregion
-
-#if __OS_WIN
-#define AtomicAdd(mutex, val) InterlockedAdd((volatile long *)mutex, val) - val
-#elif __OS_UNIX
-#define AtomicAdd(mutex, val) __sync_fetch_and_add((volatile long *)mutex, val) - val
-#endif
 
 static void executeTrans(char id, sentinelCommand *cmd, int size, sentinelInPtr *listIn, sentinelOutPtr *listOut, intptr_t offset, char *&trans);
 
@@ -119,34 +80,31 @@ static bool postfixPtrs(sentinelOutPtr *ptrsOut, sentinelCommand *cmd, intptr_t 
 static sentinelMap *_sentinelClientMap = nullptr;
 static intptr_t _sentinelClientMapOffset = 0;
 void sentinelClientSend(sentinelMessage *msg, int msgLength, sentinelInPtr *ptrsIn, sentinelOutPtr *ptrsOut) {
-#ifndef _WIN64
-	printf("Sentinel client currently only works in x64.\n"); abort();
-#else
 	sentinelMap *map = _sentinelClientMap;
 	if (!map)
-		panic("sentinel: client map not defined. did you start sentinel?\n");
+		panic("sentinel: client map not defined. did you call sentinelClientInitialize?");
+	if (msgLength <= 0 || ROUND8_(msgLength) > SENTINEL_MSGSIZE)
+		panic("sentinel: msg too long (%d)", msgLength);
 
-	// ATTACH
-	long id = AtomicAdd(&map->setId, 1);
-	sentinelCommand *cmd = (sentinelCommand *)&map->cmds[id % SENTINEL_MSGCOUNT];
+	// ATTACH: take a ticket and own its slot once the previous occupant has released it
+	unsigned int id = mutexAdd(&map->setId, 1);
+	sentinelCommand *cmd = &map->cmds[id % SENTINEL_MSGCOUNT];
 	if (cmd->magic != SENTINEL_MAGIC)
-		panic("host: bad sentinel magic");
-	AtomicAdd(&cmd->locks, 1);
-	volatile long *control = &cmd->control; intptr_t offset = _sentinelClientMapOffset; char *trans = nullptr;
+		panic("sentinel: bad magic");
+	mutexAdd((unsigned int *)&cmd->locks, 1);
+	int *control = &cmd->control; intptr_t offset = _sentinelClientMapOffset; char *trans = nullptr;
 	mutexSpinLock(nullptr, control, SENTINELCONTROL_NORMAL, SENTINELCONTROL_DEVICE);
-	if (cmd->locks != 1)
-		panic("host: bad sentinel lock");
 
 	// PREPARE
-	char *data = cmd->data + ROUND8_(msgLength), *dataEnd = data + msg->size;
+	char *data = cmd->data + ROUND8_(msgLength), *dataEnd = data + msg->size, *slotEnd = cmd->data + SENTINEL_MSGSIZE;
+	if (dataEnd > slotEnd) dataEnd = slotEnd;
 	sentinelOutPtr *listOut = nullptr;
 	if (((ptrsIn || ptrsOut) && !(data = preparePtrs(ptrsIn, ptrsOut, cmd, data, dataEnd, offset, listOut, trans))) ||
 		(msg->prepare && !msg->prepare(msg, data, dataEnd, offset)))
-		panic("host: msg too long");
+		panic("sentinel: msg too long (op %d)", msg->op);
 	if (listOut)
 		msg->flow |= SENTINELFLOW_TRAN;
 	cmd->length = msgLength; memcpy(cmd->data, msg, msgLength);
-	//printf("msg: %d[%d]'", msg->op, msgLength); for (int i = 0; i < msgLength; i++) printf("%02x", ((char *)msg)[i] & 0xff); printf("'\n");
 	mutexSet(control, SENTINELCONTROL_DEVICERDY);
 
 	// FLOW-WAIT
@@ -155,19 +113,18 @@ void sentinelClientSend(sentinelMessage *msg, int msgLength, sentinelInPtr *ptrs
 		cmd->length = msgLength; memcpy(msg, cmd->data, msgLength);
 		if ((ptrsOut && !postfixPtrs(ptrsOut, cmd, offset, listOut, trans)) ||
 			(msg->postfix && !msg->postfix(msg, offset)))
-			panic("host: postfix error");
+			panic("sentinel: postfix error (op %d)", msg->op);
 		mutexSet(control, !listOut ? SENTINELCONTROL_NORMAL : SENTINELCONTROL_DEVICERDY);
 	}
-	AtomicAdd(&cmd->locks, -1);
-#endif
+	mutexAdd((unsigned int *)&cmd->locks, (unsigned int)-1);
 }
 
 static void executeTrans(char id, sentinelCommand *cmd, int size, sentinelInPtr *listIn, sentinelOutPtr *listOut, intptr_t offset, char *&trans) {
-	volatile long *control = &cmd->control;
+	int *control = &cmd->control;
 	sentinelInPtr *i; sentinelOutPtr *o; char **field; char *data = cmd->data, *ptr = trans;
 	switch (id) {
 	case 0:
-		*(int *)data = size;
+		cmd->length = size;
 		mutexSet(control, SENTINELCONTROL_TRANSIZE);
 		mutexSpinLock(nullptr, control, SENTINELCONTROL_TRANRDY, SENTINELCONTROL_TRAN);
 		ptr = trans = *(char **)data;
@@ -208,40 +165,36 @@ static void executeTrans(char id, sentinelCommand *cmd, int size, sentinelInPtr 
 	}
 }
 
+static void *_clientMap = nullptr;
 #if __OS_WIN
 static HANDLE _clientMapHandle = NULL;
-static int *_clientMap = nullptr;
-#elif __OS_UNIX
-static void *_clientMap = nullptr;
 #endif
 
-void sentinelClientInitialize(char *mapHostName) {
+void sentinelClientInitialize(const char *mapHostName) {
 #if __OS_WIN
-	_clientMapHandle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, mapHostName);
+	_clientMapHandle = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, mapHostName);
 	if (!_clientMapHandle) {
-		printf("(%d) Could not connect to Sentinel host. Please ensure host application is running.\n", GetLastError()); exit(1);
+		fprintf(stderr, "sentinel: (%lu) could not connect to the Sentinel host %s. Please ensure the host application is running.\n", (unsigned long)GetLastError(), mapHostName); exit(1);
 	}
-	_clientMap = (int *)MapViewOfFile(_clientMapHandle, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(sentinelMap) + MEMORY_ALIGNMENT);
+	_clientMap = MapViewOfFile(_clientMapHandle, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(sentinelMap));
 	if (!_clientMap) {
-		printf("(%d) Could not map view of file.\n", GetLastError());
-		CloseHandle(_clientMapHandle); exit(1);
+		fprintf(stderr, "sentinel: (%lu) could not map view of %s.\n", (unsigned long)GetLastError(), mapHostName);
+		CloseHandle(_clientMapHandle); _clientMapHandle = NULL; exit(1);
 	}
-	_sentinelClientMap = (sentinelMap *)ROUNDN_(_clientMap, MEMORY_ALIGNMENT);
-	_sentinelClientMapOffset = (intptr_t)((char *)_sentinelClientMap->offset - (char *)_sentinelClientMap);
 #elif __OS_UNIX
-	struct stat sb;
-	int fd = open(mapHostName, O_RDONLY);
-	if (fd == -1) { perror("open"); exit(1); }
-	if (fstat(fd, &sb) == -1) { perror("fstat"); exit(1); }
-	if (!S_ISREG(sb.st_mode)) { fprintf(stderr, "%s is not a file\n", mapHostName); exit(1); }
-	_clientMap = mmap(NULL, sizeof(sentinelMap) + MEMORY_ALIGNMENT, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, fd, 0);
-	if (!_clientMap) {
-		printf("Could not connect to Sentinel host. Please ensure host application is running.\n"); exit(1);
+	int fd = shm_open(mapHostName, O_RDWR, 0);
+	if (fd < 0) {
+		fprintf(stderr, "sentinel: could not connect to the Sentinel host %s (%s). Please ensure the host application is running.\n", mapHostName, strerror(errno)); exit(1);
 	}
-	if (close(fd) == -1) { perror("close"); exit(1); }
-	_sentinelClientMap = (sentinelMap *)ROUNDN_(_clientMap, MEMORY_ALIGNMENT);
-	_sentinelClientMapOffset = 0;
+	_clientMap = mmap(nullptr, sizeof(sentinelMap), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	close(fd);
+	if (_clientMap == MAP_FAILED) {
+		_clientMap = nullptr;
+		fprintf(stderr, "sentinel: could not map the Sentinel host %s: %s\n", mapHostName, strerror(errno)); exit(1);
+	}
 #endif
+	_sentinelClientMap = (sentinelMap *)_clientMap;
+	_sentinelClientMapOffset = _sentinelClientMap->offset - (intptr_t)_sentinelClientMap; // server address minus ours
 }
 
 void sentinelClientShutdown() {
@@ -249,8 +202,10 @@ void sentinelClientShutdown() {
 	if (_clientMap) { UnmapViewOfFile(_clientMap); _clientMap = nullptr; }
 	if (_clientMapHandle) { CloseHandle(_clientMapHandle); _clientMapHandle = NULL; }
 #elif __OS_UNIX
-	if (_clientMap) { munmap(_clientMap, sizeof(sentinelMap) + MEMORY_ALIGNMENT); _clientMap = nullptr; }
+	if (_clientMap) { munmap(_clientMap, sizeof(sentinelMap)); _clientMap = nullptr; }
 #endif
+	_sentinelClientMap = nullptr;
+	_sentinelClientMapOffset = 0;
 }
 
 static __forceinline__ int getprocessid_() { host_getprocessid msg; return msg.rc; }
@@ -261,6 +216,7 @@ void sentinelClientRedir(pipelineRedir *redir) {
 	HANDLE process = OpenProcess(PROCESS_DUP_HANDLE, FALSE, getprocessid_());
 	pipelineCreate(1, sentinelClientRedirPipelineArgs, nullptr, &redir[1].input, &redir[1].output, &redir[1].error, process, redir);
 #elif __OS_UNIX
+	(void)redir; // output redirection through the server process is not implemented on POSIX yet
 #endif
 }
 

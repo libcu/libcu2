@@ -44,8 +44,29 @@ extern "C" {
 #define HAS_HOSTSENTINEL 1
 #endif
 
+/*
+** Sentinel is two message buses built on the same mailbox.
+**
+** Device bus: sentinelServerInitialize allocates SENTINEL_DEVICEMAPS pinned, device-mapped
+** host buffers. Device code sends a message with sentinelDeviceSend; a host thread per map
+** runs it through the registered device executors and, if the message waits, writes the
+** result back. Values a message points at travel inline in the slot when they fit
+** (sentinelInPtr / sentinelOutPtr) and through the chunked transfer states otherwise.
+**
+** Host bus: the same mailbox in a named shared-memory segment (SENTINEL_NAME), so another
+** process on the host can send messages with sentinelClientSend. The file utilities use this
+** to reach the process that owns the CUDA context.
+**
+** Slot state lives in sentinelCommand::control and is only touched through the system-scope
+** atomics in ext/mutex.h; it is shared between a GPU and host threads, or two host processes.
+*/
+
+#if __OS_WIN
 #define SENTINEL_NAME "Sentinel" //"Global\\Sentinel"
-#define SENTINEL_MAGIC (unsigned short)0xC811
+#else
+#define SENTINEL_NAME "/sentinel"
+#endif
+#define SENTINEL_MAGIC 0xC811
 #define SENTINEL_DEVICEMAPS 1
 #define SENTINEL_MSGSIZE 5120
 #define SENTINEL_MSGCOUNT 1
@@ -75,7 +96,7 @@ extern "C" {
 		int size;
 		char *(*prepare)(void*, char*, char*, intptr_t);
 		bool(*postfix)(void*, intptr_t);
-		__device__ sentinelMessage(unsigned short op, unsigned char flow = SENTINELFLOW_WAIT, int size = 0, char *(*prepare)(void*, char*, char*, intptr_t) = nullptr, bool(*postfix)(void*, intptr_t) = nullptr)
+		__host__ __device__ sentinelMessage(unsigned short op, unsigned char flow = SENTINELFLOW_WAIT, int size = 0, char *(*prepare)(void*, char*, char*, intptr_t) = nullptr, bool(*postfix)(void*, intptr_t) = nullptr)
 			: op(op), flow(flow), size(size), prepare(prepare), postfix(postfix) { }
 	} sentinelMessage;
 #define SENTINELPREPARE(P) ((char *(*)(void*,char*,char*,intptr_t))&P)
@@ -88,25 +109,24 @@ extern "C" {
 			: base(op, flow, size, prepare, postfix), redir(redir) { }
 	} sentinelClientMessage;
 
-	typedef struct __align__(8) {
-		unsigned short magic;
-		volatile long control;
-		int locks;
-		int length;
+	/* One slot: a fixed header followed by the sentinelMessage and the values it embeds. */
+	typedef struct __align__(8) sentinelCommand {
+		int magic;      /* SENTINEL_MAGIC, set when the map is created */
+		int control;    /* SENTINELCONTROL_*, accessed only through ext/mutex.h */
+		int locks;      /* senders attached to the slot, for diagnostics */
+		int length;     /* bytes of the sentinelMessage at data */
 		char data[SENTINEL_MSGSIZE];
-		void dump();
 	} sentinelCommand;
 
-	typedef struct __align__(8) {
-		long getId;
-		volatile long setId;
-		intptr_t offset;
+	typedef struct __align__(8) sentinelMap {
+		unsigned int getId;     /* next ticket the host thread consumes */
+		unsigned int setId;     /* next ticket to hand out; senders fetch_add it */
+		intptr_t offset;        /* host address of this map minus the sender's address of it */
 		sentinelCommand cmds[SENTINEL_MSGCOUNT];
-		void dump();
 	} sentinelMap;
 
 	typedef struct sentinelExecutor {
-		sentinelExecutor *next;
+		struct sentinelExecutor *next;
 		const char *name;
 		bool(*executor)(void*, sentinelMessage*, int, char*(**)(void*, char*, char*, intptr_t));
 		void *tag;
@@ -119,23 +139,19 @@ extern "C" {
 		sentinelExecutor *deviceList;
 	} sentinelContext;
 
-	//#if HAS_HOSTSENTINEL // not-required
-	//	extern sentinelMap *_sentinelHostMap;
-	//	extern intptr_t _sentinelHostMapOffset;
-	//#endif
 #if HAS_DEVICESENTINEL
-	extern __constant__ const sentinelMap *_sentinelDeviceMap[SENTINEL_DEVICEMAPS];
+	extern __constant__ sentinelMap *_sentinelDeviceMap[SENTINEL_DEVICEMAPS];
 #endif
 
 	extern bool sentinelDefaultHostExecutor(void *tag, sentinelMessage *data, int length, char *(**hostPrepare)(void*, char*, char*, intptr_t));
 	extern bool sentinelDefaultDeviceExecutor(void *tag, sentinelMessage *data, int length, char *(**hostPrepare)(void*, char*, char*, intptr_t));
-	extern void sentinelServerInitialize(sentinelExecutor *deviceExecutor = nullptr, char *mapHostName = (char *)SENTINEL_NAME, bool hostSentinel = true, bool deviceSentinel = true);
+	extern void sentinelServerInitialize(sentinelExecutor *deviceExecutor = nullptr, const char *mapHostName = SENTINEL_NAME, bool hostSentinel = true, bool deviceSentinel = true);
 	extern void sentinelServerShutdown();
 #if HAS_DEVICESENTINEL
 	extern __device__ void sentinelDeviceSend(sentinelMessage *msg, int msgLength, sentinelInPtr *ptrsIn = nullptr, sentinelOutPtr *ptrsOut = nullptr);
 #endif
 #if HAS_HOSTSENTINEL
-	extern void sentinelClientInitialize(char *mapHostName = (char *)SENTINEL_NAME);
+	extern void sentinelClientInitialize(const char *mapHostName = SENTINEL_NAME);
 	extern void sentinelClientShutdown();
 	extern void sentinelClientRedir(pipelineRedir *redir);
 	extern void sentinelClientSend(sentinelMessage *msg, int msgLength, sentinelInPtr *ptrsIn = nullptr, sentinelOutPtr *ptrsOut = nullptr);
@@ -147,6 +163,9 @@ extern "C" {
 	// file-utils
 	extern void sentinelRegisterFileUtils();
 
+	/* Slot states. A sender takes the slot at NORMAL, fills it and marks it DEVICERDY; the host
+	** takes it to HOST, executes, and marks it HOSTRDY when the sender waits for a reply. The
+	** TRAN states move values larger than a slot through it one chunk at a time. */
 #define SENTINELCONTROL_NORMAL 0x0
 #define SENTINELCONTROL_DEVICE 0x1
 #define SENTINELCONTROL_DEVICERDY 0x2
