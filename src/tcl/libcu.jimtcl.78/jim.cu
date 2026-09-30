@@ -188,7 +188,7 @@ static __host_device__ int utf8_tounicode_case(const char *s, int *uc, int upper
  */
 static __host_device__ const char *JimCharsetMatch(const char *pattern, int c, int flags)
 {
-    int not = 0;
+    int negate = 0;
     int pchar;
     int match = 0;
     int nocase = 0;
@@ -200,7 +200,7 @@ static __host_device__ const char *JimCharsetMatch(const char *pattern, int c, i
 
     if (flags & JIM_CHARSET_SCAN) {
         if (*pattern == '^') {
-            not++;
+            negate++;
             pattern++;
         }
 
@@ -240,7 +240,7 @@ first:
             match = 1;
         }
     }
-    if (not) {
+    if (negate) {
         match = !match;
     }
 
