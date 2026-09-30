@@ -22,16 +22,16 @@ These are the methods to access Sentinel's functionality:
 ```
 extern bool sentinelDefaultHostExecutor(void *tag, sentinelMessage *data, int length, char *(**hostPrepare)(void*,char*,char*,intptr_t));
 extern bool sentinelDefaultDeviceExecutor(void *tag, sentinelMessage *data, int length, char *(**hostPrepare)(void*,char*,char*,intptr_t));
-extern void sentinelServerInitialize(sentinelExecutor *deviceExecutor = nullptr, char *mapHostName = SENTINEL_NAME, bool hostSentinel = true, bool deviceSentinel = true);
+extern void sentinelServerInitialize(sentinelExecutor *deviceExecutor = nullptr, const char *mapHostName = SENTINEL_NAME, bool hostSentinel = true, bool deviceSentinel = true);
 extern void sentinelServerShutdown();
 #if HAS_DEVICESENTINEL
-	extern __device__ void sentinelDeviceSend(sentinelMessage *msg, int msgLength);
+	extern __device__ void sentinelDeviceSend(sentinelMessage *msg, int msgLength, sentinelInPtr *ptrsIn = nullptr, sentinelOutPtr *ptrsOut = nullptr);
 #endif
 #if HAS_HOSTSENTINEL
-	extern void sentinelClientInitialize(char *mapHostName = SENTINEL_NAME);
+	extern void sentinelClientInitialize(const char *mapHostName = SENTINEL_NAME);
 	extern void sentinelClientShutdown();
 	extern void sentinelClientRedir(pipelineRedir *redir);
-	extern void sentinelClientSend(sentinelMessage *msg, int msgLength);
+	extern void sentinelClientSend(sentinelMessage *msg, int msgLength, sentinelInPtr *ptrsIn = nullptr, sentinelOutPtr *ptrsOut = nullptr);
 #endif
 extern sentinelExecutor *sentinelFindExecutor(const char *name, bool forDevice = true);
 extern void sentinelRegisterExecutor(sentinelExecutor *exec, bool makeDefault = false, bool forDevice = true);
@@ -43,20 +43,27 @@ extern void sentinelRegisterFileUtils();
 
 ## Structure
 These defines are used for Sentinel:
-* `SENTINEL_NAME` - default name to use for IPC when calling `sentinelServerInitialize`
-* `SENTINEL_MAGIC` - a magic value used to ensure message alignment
+* `SENTINEL_NAME` - default name of the host bus: a file mapping on Windows, a POSIX shared-memory segment (`shm_open`) elsewhere
+* `SENTINEL_MAGIC` - a magic value written into every slot when a map is created, checked on every access
 * `SENTINEL_DEVICEMAPS` - the number of device to host maps, and threads to create
-* `SENTINEL_MSGSIZE` - the size of a message structure including its header information
-* `SENTINEL_MSGCOUNT` - the number of message structures available in a given map
-* `SENTINEL_CHUNK` - the chunking size available in a message
+* `SENTINEL_MSGSIZE` - the bytes of payload in a slot: the `sentinelMessage` plus the values it embeds
+* `SENTINEL_MSGCOUNT` - the number of slots in a map
+* `SENTINEL_CHUNK` - the default `size` budget for embedded values; larger values go through the chunked transfer
 ```
+#if __OS_WIN
 #define SENTINEL_NAME "Sentinel"
-#define SENTINEL_MAGIC (unsigned short)0xC811
+#else
+#define SENTINEL_NAME "/sentinel"
+#endif
+#define SENTINEL_MAGIC 0xC811
 #define SENTINEL_DEVICEMAPS 1
 #define SENTINEL_MSGSIZE 5120
-#define SENTINEL_MSGCOUNT 5
+#define SENTINEL_MSGCOUNT 1
 #define SENTINEL_CHUNK 4096
 ```
+
+### Transport
+Slot state, tickets and lock counts are shared between a GPU and host threads, or between two host processes, so they are only ever touched through the system-scope atomics in `ext/mutex.h` (`cuda::atomic_ref` with `cuda::thread_scope_system`): `mutexGet`, `mutexSet`, `mutexAdd` and `mutexSpinLock`. Waiting backs off exponentially in microseconds, yielding first on the host and using `__nanosleep` on the device; nothing in the bus is a block-wide barrier, so any thread of any warp may send. The host threads are `std::thread`s with a cancel token and are joined by `sentinelServerShutdown`, which is also registered with `atexit`.
 
 ### SentinelContext
 SentinelContext is a singleton which represents the state of Sentinel. Sentinel provides two distinct message buses for device to host, and host to host communication respectivly. The later is used for IPC using named pipes, named `SENTINEL_NAME`, and is extensivly used by the file-system utilities.
@@ -76,35 +83,39 @@ sentinelContext
 
 ### SentinelMap
 Each `sentinelMap` has a dedicated processing thread and can hold `SENTINEL_MSGCOUNT` messages of size `SENTINEL_MSGSIZE`, this size must include the `sentinelCommand` size.
-* `getId` is a rolling index into the next message to read
-* New messages are written to `setId`, which is marked volatile to by-pass any caching issues
-* `offset(s)` are applied as appropreate to align mapped memory between host and device coordinates
-* Data contains all `sentinelCommand(s)` with embedded `sentinelMessage(s)` with a queue depth of `SENTINEL_MSGCOUNT`. `SENTINEL_MSGSIZE` must include the `sentinelCommand` size 
+* `getId` is the next ticket the map's thread consumes
+* `setId` is the next ticket handed out; every sender takes one with `mutexAdd` and owns slot `ticket % SENTINEL_MSGCOUNT` once it is free
+* `offset` is the host address of the map minus the sender's address of it: zero for the device under unified addressing, and the difference between the two processes' mappings on the host bus. Pointers embedded in a message have it added so the host can follow them
+* `cmds` holds the slots
 ```
 sentinelMap
-- getId - current reading location
-- setId:volatile - current writing location, atomicaly incremeted by SENTINEL_MSGSIZE 
-- offset - used for map alignment
-- data[SENTINEL_MSGSIZE*SENTINEL_MSGCOUNT]
+- getId - next ticket to consume
+- setId - next ticket to hand out, atomically incremented
+- offset - host address of the map minus the sender's address of it
+- cmds[SENTINEL_MSGCOUNT] - the slots
 ```
 
 ### SentinelCommand
 Each `sentinelCommand` represents a command being passed across the bus, and has an embeded `sentinelMessage` in it's `Data` property
-* `Magic` is used to ensure message alignment
-* `Control` handles flow control, and is marked volatile to by-pass any caching issues
-	* 0 - normal state
-	* 1 - device in-progress
-	* 2 - device signal that data is ready to process
-	* 3 - host in-progress
-	* 4 - host signal that results are ready to read
-* `Length` and `Data` represent the embeded `sentinelMessage`
+* `magic` is written when the map is created and checked on every access
+* `control` is the slot state, accessed only through `ext/mutex.h`
+	* `SENTINELCONTROL_NORMAL` (0) - free
+	* `SENTINELCONTROL_DEVICE` (1) - a sender owns the slot and is filling it
+	* `SENTINELCONTROL_DEVICERDY` (2) - the message is complete and waits for the host
+	* `SENTINELCONTROL_DEVICEWAIT` (3) - the sender is reading the reply
+	* `SENTINELCONTROL_HOST` (5) - the host thread is executing the message
+	* `SENTINELCONTROL_HOSTRDY` (6) - the reply is in the slot
+	* `SENTINELCONTROL_HOSTWAIT` (7) - the host waits for the sender to finish a transfer out
+	* `SENTINELCONTROL_TRAN*` (0x10 and up) - the chunked transfer of a value larger than the slot: `TRANSIZE` asks the host for a buffer of `length` bytes, `TRANIN` and `TRANOUT` move one chunk of `length` bytes, `TRANRDY` is the host's acknowledgement and `TRAN` the sender's
+* `locks` counts the senders currently attached to the slot, for diagnostics
+* `length` and `data` hold the embedded `sentinelMessage`, followed at `ROUND8_(length)` by the values it embeds
 ```
 sentinelCommand
-- magic - magic
-- control:volatile - control flag
-- unknown - internal field
-- length - length of data
-- data[...] - data
+- magic - SENTINEL_MAGIC
+- control - slot state
+- locks - attached senders
+- length - length of the message
+- data[SENTINEL_MSGSIZE] - the message and its embedded values
 ```
 
 ### SentinelMessage
